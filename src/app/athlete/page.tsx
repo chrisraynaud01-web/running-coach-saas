@@ -8,6 +8,8 @@ import { MarkCompleteButton } from "@/components/athlete/mark-complete-button"
 import { WorkoutResultDialog } from "@/components/athlete/workout-result-dialog"
 import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
 import { formatWorkoutSchedule, formatDistance, formatDuration } from "@/lib/format"
+import { secondsToClock } from "@/lib/time"
+import { formatBlockSummary, totalReps } from "@/lib/workout-summary"
 
 export default async function AthletePlanningPage() {
   const athlete = await getCurrentAthlete()
@@ -62,15 +64,7 @@ export default async function AthletePlanningPage() {
                           {workoutBlockTypeLabels[b.type as keyof typeof workoutBlockTypeLabels] ?? b.type}
                         </span>
                         {" — "}
-                        {b.label ||
-                          [
-                            b.repetitions && `${b.repetitions}x`,
-                            b.distanceMeters && `${b.distanceMeters}m`,
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                        {b.recoveryDurationSeconds ? ` · récup ${b.recoveryDurationSeconds}s` : ""}
-                        {b.vmaPercent ? ` · ${b.vmaPercent}% VMA` : ""}
+                        {formatBlockSummary(b)}
                       </li>
                     ))}
                   </ul>
@@ -121,19 +115,32 @@ export default async function AthletePlanningPage() {
                   {formatWorkoutSchedule(w.scheduledDate)} · {formatDistance(w.plannedDistanceMeters)} ·{" "}
                   {formatDuration(w.plannedDurationSeconds)}
                 </p>
-                {w.blocks.some((b) => b.actualDurationSeconds || b.actualNotes) && (
+                {w.blocks.some(
+                  (b) => b.actualDurationSeconds || b.actualNotes || b.actualRepSecondsList.some((s) => s > 0)
+                ) && (
                   <ul className="mt-1.5 space-y-0.5">
                     {w.blocks
-                      .filter((b) => b.actualDurationSeconds || b.actualNotes)
-                      .map((b) => (
-                        <li key={b.id} className="text-xs text-muted-foreground">
-                          <span className="font-medium text-foreground/80">
-                            {workoutBlockTypeLabels[b.type as keyof typeof workoutBlockTypeLabels] ?? b.type}
-                          </span>
-                          {b.actualDurationSeconds ? ` — réalisé en ${formatDuration(b.actualDurationSeconds)}` : ""}
-                          {b.actualNotes ? ` (${b.actualNotes})` : ""}
-                        </li>
-                      ))}
+                      .filter(
+                        (b) =>
+                          b.actualDurationSeconds || b.actualNotes || b.actualRepSecondsList.some((s) => s > 0)
+                      )
+                      .map((b) => {
+                        const reps = totalReps(b)
+                        const filledReps = b.actualRepSecondsList.filter((s) => s > 0)
+                        return (
+                          <li key={b.id} className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground/80">
+                              {workoutBlockTypeLabels[b.type as keyof typeof workoutBlockTypeLabels] ?? b.type}
+                            </span>
+                            {reps > 1 && filledReps.length > 0
+                              ? ` — ${b.actualRepSecondsList.map((s) => (s > 0 ? secondsToClock(s) : "—")).join(", ")}`
+                              : b.actualDurationSeconds
+                                ? ` — réalisé en ${formatDuration(b.actualDurationSeconds)}`
+                                : ""}
+                            {b.actualNotes ? ` (${b.actualNotes})` : ""}
+                          </li>
+                        )
+                      })}
                   </ul>
                 )}
               </div>

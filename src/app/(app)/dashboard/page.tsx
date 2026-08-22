@@ -1,13 +1,13 @@
+import Link from "next/link"
 import { Users, CalendarCheck, Gauge, HeartPulse, UserX } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatCard } from "@/components/dashboard/stat-card"
-import { WeeklyLoadChart } from "@/components/dashboard/weekly-load-chart"
+import { MonthCalendar } from "@/components/dashboard/month-calendar"
 import { WorkoutTypeChart } from "@/components/dashboard/workout-type-chart"
 import { AlertPanel } from "@/components/dashboard/alert-panel"
 import { UpcomingEvents } from "@/components/dashboard/upcoming-events"
 import { AthleteFilterSelect } from "@/components/dashboard/athlete-filter-select"
 import { getCurrentCoach } from "@/lib/current-coach"
-import { prisma } from "@/lib/prisma"
 import { getDashboardData } from "./queries"
 
 export default async function DashboardPage({
@@ -18,14 +18,9 @@ export default async function DashboardPage({
   const { athlete: athleteFilter } = await searchParams
   const coach = await getCurrentCoach()
 
-  const [data, athletes] = await Promise.all([
-    getDashboardData(coach.id, athleteFilter),
-    prisma.athlete.findMany({
-      where: { coachId: coach.id, status: { not: "ARCHIVED" } },
-      select: { id: true, firstName: true, lastName: true },
-      orderBy: { firstName: "asc" },
-    }),
-  ])
+  const data = await getDashboardData(coach.id, athleteFilter)
+  const athletes = data.athletes
+  const calendarSessions = data.calendarSessions
 
   return (
     <div className="space-y-6">
@@ -61,13 +56,25 @@ export default async function DashboardPage({
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-semibold">
-              Charge d&apos;entraînement hebdomadaire
+              Calendrier des séances — {calendarSessions.monthLabel}
             </CardTitle>
+            <Link
+              href="/calendar"
+              className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+            >
+              Calendrier complet
+            </Link>
           </CardHeader>
           <CardContent>
-            <WeeklyLoadChart data={data.weeklyLoad} />
+            <MonthCalendar
+              month={calendarSessions.month}
+              sessions={calendarSessions.sessions}
+              showAthleteName={!athleteFilter}
+              maxPerDay={2}
+              athleteHref={(athleteId) => `/athletes/${athleteId}`}
+            />
           </CardContent>
         </Card>
 

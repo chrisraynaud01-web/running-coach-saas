@@ -65,6 +65,7 @@ import {
   paceFromVmaPercent,
   durationFromPaceAndDistance,
   secondsToClock,
+  parseClockToSeconds,
   timeOfDayFromDate,
   TIME_OF_DAY_VALUES,
   timeOfDayLabels,
@@ -82,10 +83,14 @@ export type WorkoutRecord = {
   blocks: {
     type: string
     label: string | null
+    sets: number | null
     repetitions: number | null
     distanceMeters: number | null
     durationSeconds: number | null
     vmaPercent: number | null
+    paceTargetSecPerKm: number | null
+    recoveryDurationSeconds: number | null
+    recoveryBetweenSetsSeconds: number | null
     intensity: string | null
   }[]
 }
@@ -120,10 +125,15 @@ function defaultValuesFor(athleteId: string, workout?: WorkoutRecord): WorkoutIn
     blocks: workout.blocks.map((b) => ({
       type: b.type as WorkoutInput["blocks"][number]["type"],
       label: b.label ?? "",
+      sets: b.sets != null ? String(b.sets) : "",
       repetitions: b.repetitions != null ? String(b.repetitions) : "",
       distanceMeters: b.distanceMeters != null ? String(b.distanceMeters) : "",
       durationSeconds: b.durationSeconds != null ? String(b.durationSeconds) : "",
       vmaPercent: b.vmaPercent != null ? String(b.vmaPercent) : "",
+      // Si l'allure n'a pas été calculée depuis un % VMA, elle a été saisie directement par le coach.
+      paceManual: !b.vmaPercent && b.paceTargetSecPerKm ? secondsToClock(b.paceTargetSecPerKm) : "",
+      recoveryDuration: b.recoveryDurationSeconds ? secondsToClock(b.recoveryDurationSeconds) : "",
+      recoveryBetweenSets: b.recoveryBetweenSetsSeconds ? secondsToClock(b.recoveryBetweenSetsSeconds) : "",
       intensity: (b.intensity ?? undefined) as WorkoutInput["blocks"][number]["intensity"],
     })),
   }
@@ -211,7 +221,7 @@ export function WorkoutFormDialog({
           <DialogDescription>
             {isEdit
               ? "Mets à jour le titre, la date ou la structure de la séance."
-              : "Planifie une séance pour cet athlète. Ajoute des blocs (échauffement, corps de séance, retour au calme) pour un format libre — par exemple 10 x 400m à VMA. La distance et la durée totales sont calculées automatiquement à partir des blocs."}
+              : "Planifie une séance pour cet athlète. Ajoute des blocs (échauffement, corps de séance, retour au calme) pour un format libre — par exemple 2 x (4 x 600m à VMA, récup 1'15) avec 3' entre les séries. La distance et la durée totales sont calculées automatiquement à partir des blocs."}
           </DialogDescription>
         </DialogHeader>
 
@@ -328,10 +338,14 @@ export function WorkoutFormDialog({
                     append({
                       type: fields.length === 0 ? "ECHAUFFEMENT" : "CORPS_DE_SEANCE",
                       label: "",
+                      sets: "",
                       repetitions: "",
                       distanceMeters: "",
                       durationSeconds: "",
                       vmaPercent: "",
+                      paceManual: "",
+                      recoveryDuration: "",
+                      recoveryBetweenSets: "",
                       intensity: undefined,
                     })
                   }
@@ -344,8 +358,8 @@ export function WorkoutFormDialog({
               {fields.length === 0 && (
                 <p className="text-xs text-muted-foreground">
                   Aucun bloc. Ajoute un bloc par étape de la séance — échauffement, corps de
-                  séance (ex : « 10 x 400m »), retour au calme, ou même la récupération entre
-                  répétitions comme un bloc à part entière.
+                  séance (ex : « 4 x 600m », avec récup entre répétitions et, si plusieurs
+                  séries, récup entre séries), retour au calme.
                 </p>
               )}
 
@@ -440,11 +454,15 @@ function BlockRow({
   const { setValue } = useFormContext<WorkoutInput>()
   const vmaPercentValue = useWatch({ control, name: `blocks.${index}.vmaPercent` })
   const distanceValue = useWatch({ control, name: `blocks.${index}.distanceMeters` })
+  const paceManualValue = useWatch({ control, name: `blocks.${index}.paceManual` })
+  const repetitionsValue = useWatch({ control, name: `blocks.${index}.repetitions` })
 
-  const pace =
+  const paceFromVma =
     athleteVma && Number(vmaPercentValue) ? paceFromVmaPercent(athleteVma, Number(vmaPercentValue)) : undefined
+  const pace = paceFromVma ?? parseClockToSeconds(paceManualValue)
   const computedDuration =
     pace && Number(distanceValue) ? durationFromPaceAndDistance(pace, Number(distanceValue)) : undefined
+  const showRecovery = Number(repetitionsValue) > 1
 
   React.useEffect(() => {
     if (computedDuration) {
@@ -575,6 +593,20 @@ function BlockRow({
             </FormItem>
           )}
         />
+        {!paceFromVma && (
+          <FormField
+            control={control}
+            name={`blocks.${index}.paceManual`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-muted-foreground">ou allure directe</FormLabel>
+                <FormControl>
+                  <Input placeholder="3:55/km" className="h-8 w-24 text-sm" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        )}
         <p className={cn("pb-2 text-xs text-muted-foreground", pace && "text-foreground")}>
           {pace ? `≈ ${secondsToClock(pace)}/km` : "—"}
         </p>
@@ -607,6 +639,54 @@ function BlockRow({
           )}
         />
       </div>
+
+      {showRecovery && (
+        <div className="flex flex-wrap items-end gap-3 rounded-md border border-dashed p-2">
+          <FormField
+            control={control}
+            name={`blocks.${index}.recoveryDuration`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-muted-foreground">
+                  Récup entre répétitions (r:)
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="1:15" className="h-8 w-20 text-sm" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name={`blocks.${index}.sets`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-muted-foreground">Séries</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="1" className="h-8 w-16 text-sm" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name={`blocks.${index}.recoveryBetweenSets`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-muted-foreground">
+                  Récup entre séries (R:)
+                </FormLabel>
+                <FormControl>
+                  <Input placeholder="3:00" className="h-8 w-20 text-sm" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <p className="pb-2 text-xs text-muted-foreground">
+            Ex : 2 x (4 x 600m, récup 1&apos;15) avec 3&apos; entre les séries
+          </p>
+        </div>
+      )}
     </div>
   )
 }

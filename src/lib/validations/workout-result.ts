@@ -4,6 +4,7 @@ import { clockField } from "./shared"
 export const blockResultSchema = z.object({
   blockId: z.string().min(1),
   actualDuration: clockField,
+  actualReps: z.array(clockField).optional(),
   actualNotes: z.string().max(500).optional().or(z.literal("")),
 })
 

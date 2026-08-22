@@ -64,15 +64,22 @@ export async function submitWorkoutResult(input: WorkoutResultInput) {
   }
 
   await prisma.$transaction([
-    ...blocks.map((b) =>
-      prisma.workoutBlock.updateMany({
+    ...blocks.map((b) => {
+      const repSeconds = (b.actualReps ?? []).map((r) => parseClockToSeconds(r) ?? 0)
+      const hasRepDetail = repSeconds.some((s) => s > 0)
+      const actualDurationSeconds = hasRepDetail
+        ? repSeconds.reduce((sum, s) => sum + s, 0)
+        : (parseClockToSeconds(b.actualDuration) ?? null)
+
+      return prisma.workoutBlock.updateMany({
         where: { id: b.blockId, workoutId },
         data: {
-          actualDurationSeconds: parseClockToSeconds(b.actualDuration) ?? null,
+          actualDurationSeconds,
+          actualRepSecondsList: hasRepDetail ? repSeconds : [],
           actualNotes: b.actualNotes || null,
         },
       })
-    ),
+    }),
     prisma.workout.update({
       where: { id: workoutId },
       data: { status: "COMPLETED", completedAt: new Date() },

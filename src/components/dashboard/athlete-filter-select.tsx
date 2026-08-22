@@ -11,8 +11,10 @@ import {
 
 export function AthleteFilterSelect({
   athletes,
+  basePath = "/dashboard",
 }: {
   athletes: { id: string; firstName: string; lastName: string }[]
+  basePath?: string
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -29,7 +31,7 @@ export function AthleteFilterSelect({
           params.set("athlete", value)
         }
         const query = params.toString()
-        router.push(`/dashboard${query ? `?${query}` : ""}`)
+        router.push(`${basePath}${query ? `?${query}` : ""}`)
       }}
     >
       <SelectTrigger className="h-8 w-52 text-sm">

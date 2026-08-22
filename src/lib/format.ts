@@ -25,6 +25,11 @@ export function formatDate(date: Date | string) {
   })
 }
 
+export function formatMonthLabel(date: Date) {
+  const label = new Date(date).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
 export function calculateAge(birthDate: Date | string) {
   const bd = new Date(birthDate)
   const today = new Date()

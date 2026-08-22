@@ -365,20 +365,23 @@ model WorkoutBlock {
   label       String? // ex: "10 x 400m à VMA"
   description String? @db.Text
 
-  repetitions Int?
+  sets        Int? // nombre de séries (ex : le "2" dans "2 x (4 x 600m)")
+  repetitions Int? // répétitions par série (ex : le "4" dans "4 x 600m")
   distanceMeters  Int?
   durationSeconds Int?
   vmaPercent  Int? // allure exprimée en % de la VMA de l'athlète au moment de la création
   paceTargetSecPerKm Int? // allure cible calculée (secondes/km), dérivée de vmaPercent ou saisie directement
   intensity   Intensity?
 
-  recoveryDurationSeconds Int?
-  recoveryDistanceMeters  Int?
+  recoveryDurationSeconds    Int? // récupération entre répétitions au sein d'une série (ex : "r:1'15")
+  recoveryBetweenSetsSeconds Int? // récupération entre séries (ex : "R:3'")
+  recoveryDistanceMeters     Int?
 
   notes String? @db.Text
 
   // Retour de l'athlète après réalisation de la séance
   actualDurationSeconds Int?
+  actualRepSecondsList  Int[] @default([]) // temps réalisé par répétition (aligné sur sets x repetitions)
   actualNotes           String? @db.Text
 
   @@index([workoutId])

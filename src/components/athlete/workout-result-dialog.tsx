@@ -23,13 +23,19 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { workoutResultSchema } from "@/lib/validations/workout-result"
 import { submitWorkoutResult } from "@/app/athlete/actions"
 import { workoutBlockTypeLabels } from "@/lib/validations/workout"
+import { formatBlockSummary, totalReps } from "@/lib/workout-summary"
 
 export type ResultBlock = {
   id: string
   type: string
   label: string | null
+  sets: number | null
   repetitions: number | null
   distanceMeters: number | null
+  vmaPercent: number | null
+  paceTargetSecPerKm: number | null
+  recoveryDurationSeconds: number | null
+  recoveryBetweenSetsSeconds: number | null
 }
 
 export function WorkoutResultDialog({
@@ -47,7 +53,12 @@ export function WorkoutResultDialog({
     resolver: zodResolver(workoutResultSchema),
     defaultValues: {
       workoutId,
-      blocks: blocks.map((b) => ({ blockId: b.id, actualDuration: "", actualNotes: "" })),
+      blocks: blocks.map((b) => ({
+        blockId: b.id,
+        actualDuration: "",
+        actualNotes: "",
+        actualReps: Array.from({ length: totalReps(b) }, () => ""),
+      })),
     },
   })
 
@@ -78,7 +89,8 @@ export function WorkoutResultDialog({
         <DialogHeader>
           <DialogTitle>Mon résultat</DialogTitle>
           <DialogDescription>
-            Indique le temps réalisé pour chaque bloc — la séance sera marquée comme réalisée.
+            Indique le temps réalisé pour chaque répétition — la séance sera marquée comme
+            réalisée.
           </DialogDescription>
         </DialogHeader>
 
@@ -86,42 +98,61 @@ export function WorkoutResultDialog({
           <form onSubmit={onSubmit} className="space-y-4">
             {fields.map((field, index) => {
               const block = blocks[index]
-              const summary =
-                block.label ||
-                [block.repetitions && `${block.repetitions}x`, block.distanceMeters && `${block.distanceMeters}m`]
-                  .filter(Boolean)
-                  .join(" ")
+              const reps = totalReps(block)
+              const summary = formatBlockSummary(block)
               return (
                 <div key={field.id} className="space-y-2 rounded-md border p-3">
                   <p className="text-sm font-medium">
                     {workoutBlockTypeLabels[block.type as keyof typeof workoutBlockTypeLabels] ?? block.type}
                     {summary ? ` — ${summary}` : ""}
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <FormField
-                      control={form.control}
-                      name={`blocks.${index}.actualDuration`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs text-muted-foreground">Temps réalisé</FormLabel>
-                          <FormControl>
-                            <Input placeholder="mm:ss" className="h-8 text-sm" {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+
+                  {reps > 1 ? (
+                    <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+                      {Array.from({ length: reps }, (_, repIndex) => (
+                        <FormField
+                          key={repIndex}
+                          control={form.control}
+                          name={`blocks.${index}.actualReps.${repIndex}`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs text-muted-foreground">
+                                Rep {repIndex + 1}
+                              </FormLabel>
+                              <FormControl>
+                                <Input placeholder="mm:ss" className="h-8 text-sm" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <FormField
+                        control={form.control}
+                        name={`blocks.${index}.actualDuration`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs text-muted-foreground">Temps réalisé</FormLabel>
+                            <FormControl>
+                              <Input placeholder="mm:ss" className="h-8 text-sm" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
                   <FormField
                     control={form.control}
                     name={`blocks.${index}.actualNotes`}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs text-muted-foreground">
-                          Notes (ex : temps par répétition)
-                        </FormLabel>
+                        <FormLabel className="text-xs text-muted-foreground">Notes</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="1:32, 1:33, 1:35..."
+                            placeholder="Ressenti, conditions..."
                             className="min-h-16 text-sm"
                             {...field}
                           />

@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/badge"
 import { WorkoutRowActions } from "@/components/athletes/workout-row-actions"
 import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
 import { formatWorkoutSchedule, formatDistance, formatDuration } from "@/lib/format"
-import { paceFromVmaPercent, secondsToClock } from "@/lib/time"
+import { secondsToClock } from "@/lib/time"
+import { formatBlockSummary, totalReps } from "@/lib/workout-summary"
 
 export type WorkoutListItemData = {
   id: string
@@ -18,13 +19,17 @@ export type WorkoutListItemData = {
     id: string
     type: string
     label: string | null
+    sets: number | null
     repetitions: number | null
     distanceMeters: number | null
     durationSeconds: number | null
     recoveryDurationSeconds: number | null
+    recoveryBetweenSetsSeconds: number | null
     vmaPercent: number | null
+    paceTargetSecPerKm: number | null
     intensity: string | null
     actualDurationSeconds: number | null
+    actualRepSecondsList: number[]
     actualNotes: string | null
   }[]
 }
@@ -68,34 +73,34 @@ export function WorkoutListItem({
         </p>
         {workout.blocks.length > 0 && (
           <ul className="mt-1.5 space-y-0.5">
-            {workout.blocks.map((b) => (
-              <li key={b.id} className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground/80">
-                  {workoutBlockTypeLabels[b.type as keyof typeof workoutBlockTypeLabels] ?? b.type}
-                </span>
-                {" — "}
-                {b.label ||
-                  [
-                    b.repetitions && `${b.repetitions}x`,
-                    b.distanceMeters && `${b.distanceMeters}m`,
-                    b.durationSeconds && `${Math.round(b.durationSeconds / 60)}min`,
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                {b.recoveryDurationSeconds ? ` · récup ${b.recoveryDurationSeconds}s` : ""}
-                {b.vmaPercent ? ` · ${b.vmaPercent}% VMA` : ""}
-                {b.vmaPercent && athleteVma
-                  ? ` (≈ ${secondsToClock(paceFromVmaPercent(athleteVma, b.vmaPercent))}/km)`
-                  : ""}
-                {b.actualDurationSeconds && (
-                  <span className="text-foreground/80">
-                    {" · réalisé "}
-                    {formatDuration(b.actualDurationSeconds)}
+            {workout.blocks.map((b) => {
+              const reps = totalReps(b)
+              const filledReps = b.actualRepSecondsList.filter((s) => s > 0)
+              return (
+                <li key={b.id} className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground/80">
+                    {workoutBlockTypeLabels[b.type as keyof typeof workoutBlockTypeLabels] ?? b.type}
                   </span>
-                )}
-                {b.actualNotes && ` — "${b.actualNotes}"`}
-              </li>
-            ))}
+                  {" — "}
+                  {formatBlockSummary(b)}
+                  {b.durationSeconds ? ` (${secondsToClock(b.durationSeconds)}/rep)` : ""}
+                  {reps > 1 && filledReps.length > 0 ? (
+                    <span className="text-foreground/80">
+                      {" · réalisé "}
+                      {b.actualRepSecondsList.map((s) => (s > 0 ? secondsToClock(s) : "—")).join(", ")}
+                    </span>
+                  ) : (
+                    b.actualDurationSeconds && (
+                      <span className="text-foreground/80">
+                        {" · réalisé "}
+                        {formatDuration(b.actualDurationSeconds)}
+                      </span>
+                    )
+                  )}
+                  {b.actualNotes && ` — "${b.actualNotes}"`}
+                </li>
+              )
+            })}
           </ul>
         )}
       </div>

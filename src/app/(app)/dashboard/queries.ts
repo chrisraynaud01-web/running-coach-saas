@@ -1,7 +1,9 @@
-import { startOfWeek, endOfWeek, subWeeks, format } from "date-fns"
+import { startOfWeek, endOfWeek, subWeeks, startOfMonth, endOfMonth, format } from "date-fns"
 import { fr } from "date-fns/locale"
 import { prisma } from "@/lib/prisma"
 import { workoutTypeLabels, type workoutTypeValues } from "@/lib/validations/workout"
+import { formatMonthLabel } from "@/lib/format"
+import type { CalendarSession } from "@/components/dashboard/month-calendar"
 
 const INACTIVE_AFTER_DAYS = 7
 
@@ -23,13 +25,22 @@ export async function getDashboardData(coachId: string, athleteId?: string) {
   const athleteScope = athleteId ? { coachId, id: athleteId } : { coachId }
   const workoutScope = athleteId ? { coachId, id: athleteId } : { coachId }
 
-  const [athletes, athleteCount, rangeWorkouts, completedWorkouts, journalEntries, upcomingGoals] =
+  const calendarMonth = new Date()
+  const calendarGridStart = startOfWeek(startOfMonth(calendarMonth), { weekStartsOn: 1 })
+  const calendarGridEnd = endOfWeek(endOfMonth(calendarMonth), { weekStartsOn: 1 })
+
+  const [athletes, allAthletes, rangeWorkouts, completedWorkouts, journalEntries, upcomingGoals] =
     await Promise.all([
       prisma.athlete.findMany({
         where: { ...athleteScope, status: { not: "ARCHIVED" } },
         select: { id: true, firstName: true, lastName: true, createdAt: true },
       }),
-      prisma.athlete.count({ where: { ...athleteScope, status: { not: "ARCHIVED" } } }),
+      // Liste complète (non filtrée par athlète) pour alimenter le sélecteur de filtre.
+      prisma.athlete.findMany({
+        where: { coachId, status: { not: "ARCHIVED" } },
+        select: { id: true, firstName: true, lastName: true },
+        orderBy: { firstName: "asc" },
+      }),
       prisma.workout.findMany({
         where: { athlete: workoutScope, scheduledDate: { gte: rangeStart, lte: rangeEnd } },
         select: {
@@ -63,6 +74,28 @@ export async function getDashboardData(coachId: string, athleteId?: string) {
         },
       }),
     ])
+
+  const calendarWorkouts = await prisma.workout.findMany({
+    where: { athlete: workoutScope, scheduledDate: { gte: calendarGridStart, lte: calendarGridEnd } },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      scheduledDate: true,
+      athleteId: true,
+      athlete: { select: { firstName: true, lastName: true } },
+    },
+    orderBy: { scheduledDate: "asc" },
+  })
+
+  const calendarSessions: CalendarSession[] = calendarWorkouts.map((w) => ({
+    id: w.id,
+    title: w.title,
+    status: w.status,
+    scheduledDate: w.scheduledDate,
+    athleteId: w.athleteId,
+    athleteName: `${w.athlete.firstName} ${w.athlete.lastName[0]}.`,
+  }))
 
   // --- Charge hebdomadaire (8 semaines) + séances de la semaine + tendance ---
   const weeklyLoad = weeks.map((w) => ({ week: w.label, volumeKm: 0, seances: 0 }))
@@ -155,7 +188,8 @@ export async function getDashboardData(coachId: string, athleteId?: string) {
   }))
 
   return {
-    athleteCount,
+    athletes: allAthletes,
+    athleteCount: athletes.length,
     sessionsThisWeek,
     weeklyLoadKm: currentWeekLoad,
     weeklyLoadTrendPct,
@@ -165,6 +199,11 @@ export async function getDashboardData(coachId: string, athleteId?: string) {
     inactiveAthletes,
     injuryAlerts,
     upcomingEvents,
+    calendarSessions: {
+      month: calendarMonth,
+      monthLabel: formatMonthLabel(calendarMonth),
+      sessions: calendarSessions,
+    },
   }
 }
 

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { integerField } from "./shared"
+import { integerField, clockField } from "./shared"
 import { TIME_OF_DAY_VALUES } from "@/lib/time"
 
 export const workoutTypeValues = [
@@ -52,10 +52,14 @@ export const intensityLabels: Record<(typeof intensityValues)[number], string> =
 export const workoutBlockSchema = z.object({
   type: z.enum(workoutBlockTypeValues),
   label: z.string().max(200).optional().or(z.literal("")),
+  sets: integerField,
   repetitions: integerField,
   distanceMeters: integerField,
   durationSeconds: integerField,
   vmaPercent: integerField,
+  paceManual: clockField,
+  recoveryDuration: clockField,
+  recoveryBetweenSets: clockField,
   intensity: z.enum(intensityValues).optional(),
 })
 
