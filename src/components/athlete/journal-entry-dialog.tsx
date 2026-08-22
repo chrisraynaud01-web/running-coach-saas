@@ -170,7 +170,9 @@ function ScaleField({
           <Select onValueChange={field.onChange} value={field.value}>
             <FormControl>
               <SelectTrigger className="h-8 w-full text-sm">
-                <SelectValue placeholder="—" />
+                <SelectValue placeholder="—">
+                  {(value: string | null) => (value ? `${value}/10` : "—")}
+                </SelectValue>
               </SelectTrigger>
             </FormControl>
             <SelectContent>

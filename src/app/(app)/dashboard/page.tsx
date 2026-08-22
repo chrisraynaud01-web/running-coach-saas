@@ -5,20 +5,38 @@ import { WeeklyLoadChart } from "@/components/dashboard/weekly-load-chart"
 import { WorkoutTypeChart } from "@/components/dashboard/workout-type-chart"
 import { AlertPanel } from "@/components/dashboard/alert-panel"
 import { UpcomingEvents } from "@/components/dashboard/upcoming-events"
+import { AthleteFilterSelect } from "@/components/dashboard/athlete-filter-select"
 import { getCurrentCoach } from "@/lib/current-coach"
+import { prisma } from "@/lib/prisma"
 import { getDashboardData } from "./queries"
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ athlete?: string }>
+}) {
+  const { athlete: athleteFilter } = await searchParams
   const coach = await getCurrentCoach()
-  const data = await getDashboardData(coach.id)
+
+  const [data, athletes] = await Promise.all([
+    getDashboardData(coach.id, athleteFilter),
+    prisma.athlete.findMany({
+      where: { coachId: coach.id, status: { not: "ARCHIVED" } },
+      select: { id: true, firstName: true, lastName: true },
+      orderBy: { firstName: "asc" },
+    }),
+  ])
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Vue d&apos;ensemble de votre groupe d&apos;athlètes.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Vue d&apos;ensemble de votre groupe d&apos;athlètes.
+          </p>
+        </div>
+        <AthleteFilterSelect athletes={athletes} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

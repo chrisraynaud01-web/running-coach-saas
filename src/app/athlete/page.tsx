@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { JournalEntryDialog } from "@/components/athlete/journal-entry-dialog"
 import { MarkCompleteButton } from "@/components/athlete/mark-complete-button"
+import { WorkoutResultDialog } from "@/components/athlete/workout-result-dialog"
 import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
 import { formatDateTime, formatDistance, formatDuration } from "@/lib/format"
 
@@ -81,7 +82,11 @@ export default async function AthletePlanningPage() {
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <MarkCompleteButton workoutId={w.id} />
+                {w.blocks.length > 0 ? (
+                  <WorkoutResultDialog workoutId={w.id} blocks={w.blocks} />
+                ) : (
+                  <MarkCompleteButton workoutId={w.id} />
+                )}
                 <JournalEntryDialog workoutId={w.id} workoutTitle={w.title} />
               </div>
             </div>
@@ -116,6 +121,21 @@ export default async function AthletePlanningPage() {
                   {formatDateTime(w.scheduledDate)} · {formatDistance(w.plannedDistanceMeters)} ·{" "}
                   {formatDuration(w.plannedDurationSeconds)}
                 </p>
+                {w.blocks.some((b) => b.actualDurationSeconds || b.actualNotes) && (
+                  <ul className="mt-1.5 space-y-0.5">
+                    {w.blocks
+                      .filter((b) => b.actualDurationSeconds || b.actualNotes)
+                      .map((b) => (
+                        <li key={b.id} className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground/80">
+                            {workoutBlockTypeLabels[b.type as keyof typeof workoutBlockTypeLabels] ?? b.type}
+                          </span>
+                          {b.actualDurationSeconds ? ` — réalisé en ${formatDuration(b.actualDurationSeconds)}` : ""}
+                          {b.actualNotes ? ` (${b.actualNotes})` : ""}
+                        </li>
+                      ))}
+                  </ul>
+                )}
               </div>
               <JournalEntryDialog workoutId={w.id} workoutTitle={w.title} />
             </div>

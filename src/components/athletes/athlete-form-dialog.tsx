@@ -229,7 +229,17 @@ export function AthleteFormDialog({ athlete, open: openProp, onOpenChange: onOpe
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="—" />
+                          <SelectValue placeholder="—">
+                            {(value: string | null) =>
+                              value === "MALE"
+                                ? "Homme"
+                                : value === "FEMALE"
+                                  ? "Femme"
+                                  : value === "OTHER"
+                                    ? "Autre"
+                                    : "—"
+                            }
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

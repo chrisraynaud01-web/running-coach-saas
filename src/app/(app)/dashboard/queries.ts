@@ -9,7 +9,7 @@ function workoutLoadMeters(w: { plannedDistanceMeters: number | null; actualDist
   return w.actualDistanceMeters ?? w.plannedDistanceMeters ?? 0
 }
 
-export async function getDashboardData(coachId: string) {
+export async function getDashboardData(coachId: string, athleteId?: string) {
   const now = new Date()
 
   const weeks = Array.from({ length: 8 }, (_, i) => {
@@ -20,15 +20,18 @@ export async function getDashboardData(coachId: string) {
   const rangeStart = weeks[0].start
   const rangeEnd = weeks[weeks.length - 1].end
 
+  const athleteScope = athleteId ? { coachId, id: athleteId } : { coachId }
+  const workoutScope = athleteId ? { coachId, id: athleteId } : { coachId }
+
   const [athletes, athleteCount, rangeWorkouts, completedWorkouts, journalEntries, upcomingGoals] =
     await Promise.all([
       prisma.athlete.findMany({
-        where: { coachId, status: { not: "ARCHIVED" } },
+        where: { ...athleteScope, status: { not: "ARCHIVED" } },
         select: { id: true, firstName: true, lastName: true, createdAt: true },
       }),
-      prisma.athlete.count({ where: { coachId, status: { not: "ARCHIVED" } } }),
+      prisma.athlete.count({ where: { ...athleteScope, status: { not: "ARCHIVED" } } }),
       prisma.workout.findMany({
-        where: { athlete: { coachId }, scheduledDate: { gte: rangeStart, lte: rangeEnd } },
+        where: { athlete: workoutScope, scheduledDate: { gte: rangeStart, lte: rangeEnd } },
         select: {
           scheduledDate: true,
           status: true,
@@ -38,17 +41,17 @@ export async function getDashboardData(coachId: string) {
         },
       }),
       prisma.workout.findMany({
-        where: { athlete: { coachId }, status: "COMPLETED" },
+        where: { athlete: workoutScope, status: "COMPLETED" },
         select: { athleteId: true, scheduledDate: true },
         orderBy: { scheduledDate: "desc" },
       }),
       prisma.journalEntry.findMany({
-        where: { athlete: { coachId }, date: { gte: subWeeks(now, 2) } },
+        where: { athlete: workoutScope, date: { gte: subWeeks(now, 2) } },
         select: { athleteId: true, date: true, rpe: true, fatigue: true, sleepQuality: true, stress: true },
         orderBy: { date: "desc" },
       }),
       prisma.goal.findMany({
-        where: { athlete: { coachId }, status: "ACTIVE", targetDate: { gte: now } },
+        where: { athlete: workoutScope, status: "ACTIVE", targetDate: { gte: now } },
         orderBy: { targetDate: "asc" },
         take: 5,
         select: {

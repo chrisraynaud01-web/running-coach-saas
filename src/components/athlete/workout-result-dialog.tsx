@@ -1,0 +1,146 @@
+"use client"
+
+import * as React from "react"
+import { useRouter } from "next/navigation"
+import { useFieldArray, useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { toast } from "sonner"
+import { CheckCircle2 } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
+import { workoutResultSchema } from "@/lib/validations/workout-result"
+import { submitWorkoutResult } from "@/app/athlete/actions"
+import { workoutBlockTypeLabels } from "@/lib/validations/workout"
+
+export type ResultBlock = {
+  id: string
+  type: string
+  label: string | null
+  repetitions: number | null
+  distanceMeters: number | null
+}
+
+export function WorkoutResultDialog({
+  workoutId,
+  blocks,
+}: {
+  workoutId: string
+  blocks: ResultBlock[]
+}) {
+  const router = useRouter()
+  const [open, setOpen] = React.useState(false)
+  const [pending, setPending] = React.useState(false)
+
+  const form = useForm({
+    resolver: zodResolver(workoutResultSchema),
+    defaultValues: {
+      workoutId,
+      blocks: blocks.map((b) => ({ blockId: b.id, actualDuration: "", actualNotes: "" })),
+    },
+  })
+
+  const { fields } = useFieldArray({ control: form.control, name: "blocks" })
+
+  const onSubmit = form.handleSubmit(async (values) => {
+    setPending(true)
+    const result = await submitWorkoutResult(values)
+    setPending(false)
+
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+
+    toast.success("Résultat enregistré, séance marquée comme réalisée.")
+    setOpen(false)
+    router.refresh()
+  })
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button size="sm" />}>
+        <CheckCircle2 className="size-4" />
+        Enregistrer mon résultat
+      </DialogTrigger>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Mon résultat</DialogTitle>
+          <DialogDescription>
+            Indique le temps réalisé pour chaque bloc — la séance sera marquée comme réalisée.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={onSubmit} className="space-y-4">
+            {fields.map((field, index) => {
+              const block = blocks[index]
+              const summary =
+                block.label ||
+                [block.repetitions && `${block.repetitions}x`, block.distanceMeters && `${block.distanceMeters}m`]
+                  .filter(Boolean)
+                  .join(" ")
+              return (
+                <div key={field.id} className="space-y-2 rounded-md border p-3">
+                  <p className="text-sm font-medium">
+                    {workoutBlockTypeLabels[block.type as keyof typeof workoutBlockTypeLabels] ?? block.type}
+                    {summary ? ` — ${summary}` : ""}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                      control={form.control}
+                      name={`blocks.${index}.actualDuration`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs text-muted-foreground">Temps réalisé</FormLabel>
+                          <FormControl>
+                            <Input placeholder="mm:ss" className="h-8 text-sm" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name={`blocks.${index}.actualNotes`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs text-muted-foreground">
+                          Notes (ex : temps par répétition)
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="1:32, 1:33, 1:35..."
+                            className="min-h-16 text-sm"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )
+            })}
+
+            <DialogFooter>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Envoi..." : "Enregistrer et marquer réalisée"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  )
+}

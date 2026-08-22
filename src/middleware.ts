@@ -7,6 +7,7 @@ const { auth } = NextAuth(authConfig)
 const COACH_PREFIXES = [
   "/dashboard",
   "/athletes",
+  "/workouts",
   "/calendar",
   "/exercises",
   "/messages",

@@ -377,6 +377,10 @@ model WorkoutBlock {
 
   notes String? @db.Text
 
+  // Retour de l'athlète après réalisation de la séance
+  actualDurationSeconds Int?
+  actualNotes           String? @db.Text
+
   @@index([workoutId])
   @@map("workout_blocks")
 }

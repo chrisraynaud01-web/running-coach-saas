@@ -20,6 +20,7 @@ export type NavItem = {
 export const coachNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Athlètes", href: "/athletes", icon: Users },
+  { title: "Séances", href: "/workouts", icon: NotebookPen },
   { title: "Calendrier", href: "/calendar", icon: CalendarDays },
   { title: "Bibliothèque", href: "/exercises", icon: Dumbbell },
   { title: "Messagerie", href: "/messages", icon: MessageSquare },

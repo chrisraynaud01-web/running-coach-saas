@@ -240,7 +240,11 @@ export function WorkoutFormDialog({
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue />
+                          <SelectValue>
+                            {(value: string | null) =>
+                              value ? workoutTypeLabels[value as (typeof workoutTypeValues)[number]] : ""
+                            }
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -453,7 +457,11 @@ function BlockRow({
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value}>
                 <SelectTrigger className="h-8 w-48 text-xs">
-                  <SelectValue />
+                  <SelectValue>
+                    {(value: string | null) =>
+                      value ? workoutBlockTypeLabels[value as (typeof workoutBlockTypeValues)[number]] : ""
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {workoutBlockTypeValues.map((t) => (
@@ -569,7 +577,11 @@ function BlockRow({
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger className="h-8 w-36 text-xs">
-                    <SelectValue placeholder="—" />
+                    <SelectValue placeholder="—">
+                      {(value: string | null) =>
+                        value ? intensityLabels[value as (typeof intensityValues)[number]] : "—"
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>

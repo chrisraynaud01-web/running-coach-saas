@@ -8,19 +8,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { AthleteStatusBadge } from "@/components/athletes/athlete-status-badge"
 import { WorkoutFormDialog } from "@/components/athletes/add-workout-dialog"
-import { WorkoutRowActions } from "@/components/athletes/workout-row-actions"
 import { AthleteActionsMenu } from "@/components/athletes/athlete-actions-menu"
 import { MetricsFormDialog } from "@/components/athletes/metrics-form-dialog"
 import { AthleteAccessCard } from "@/components/athletes/athlete-access-card"
-import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
-import {
-  formatDate,
-  formatDateTime,
-  formatDistance,
-  formatDuration,
-  formatPace,
-} from "@/lib/format"
-import { paceFromVmaPercent, secondsToClock } from "@/lib/time"
+import { WorkoutListItem } from "@/components/athletes/workout-list-item"
+import { calculateAge, formatDate, formatPace } from "@/lib/format"
 
 export default async function AthleteDetailPage({
   params,
@@ -86,7 +78,8 @@ export default async function AthleteDetailPage({
               )}
               {athlete.birthDate && (
                 <span className="flex items-center gap-1.5">
-                  <Cake className="size-3.5" /> {formatDate(athlete.birthDate)}
+                  <Cake className="size-3.5" /> {formatDate(athlete.birthDate)} (
+                  {calculateAge(athlete.birthDate)} ans)
                 </span>
               )}
             </div>
@@ -174,7 +167,7 @@ export default async function AthleteDetailPage({
             <p className="text-sm text-muted-foreground">Aucune séance planifiée.</p>
           )}
           {upcomingWorkouts.map((w) => (
-            <WorkoutItem key={w.id} workout={w} athleteId={athlete.id} athleteVma={metrics?.vma} />
+            <WorkoutListItem key={w.id} workout={w} athleteId={athlete.id} athleteVma={metrics?.vma} />
           ))}
         </CardContent>
       </Card>
@@ -188,7 +181,7 @@ export default async function AthleteDetailPage({
             <p className="text-sm text-muted-foreground">Aucune séance enregistrée.</p>
           )}
           {pastWorkouts.map((w) => (
-            <WorkoutItem key={w.id} workout={w} athleteId={athlete.id} athleteVma={metrics?.vma} />
+            <WorkoutListItem key={w.id} workout={w} athleteId={athlete.id} athleteVma={metrics?.vma} />
           ))}
         </CardContent>
       </Card>
@@ -205,80 +198,3 @@ function Metric({ label, value }: { label: string; value: string }) {
   )
 }
 
-function WorkoutItem({
-  workout,
-  athleteId,
-  athleteVma,
-}: {
-  workout: {
-    id: string
-    title: string
-    type: string
-    status: string
-    scheduledDate: Date
-    plannedDistanceMeters: number | null
-    plannedDurationSeconds: number | null
-    coachNotes: string | null
-    blocks: {
-      id: string
-      type: string
-      label: string | null
-      repetitions: number | null
-      distanceMeters: number | null
-      durationSeconds: number | null
-      recoveryDurationSeconds: number | null
-      vmaPercent: number | null
-      intensity: string | null
-    }[]
-  }
-  athleteId: string
-  athleteVma?: number | null
-}) {
-  return (
-    <div className="flex items-start justify-between gap-3 border-b py-2.5 last:border-0">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-medium">{workout.title}</p>
-          <Badge variant="secondary" className="shrink-0 text-xs">
-            {workoutTypeLabels[workout.type as keyof typeof workoutTypeLabels] ?? workout.type}
-          </Badge>
-          {workout.status === "COMPLETED" && (
-            <Badge className="shrink-0 bg-[--color-good]/15 text-[--color-good] text-xs" variant="outline">
-              Réalisée
-            </Badge>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {formatDateTime(workout.scheduledDate)} · {formatDistance(workout.plannedDistanceMeters)} ·{" "}
-          {formatDuration(workout.plannedDurationSeconds)}
-        </p>
-        {workout.blocks.length > 0 && (
-          <ul className="mt-1.5 space-y-0.5">
-            {workout.blocks.map((b) => (
-              <li key={b.id} className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground/80">
-                  {workoutBlockTypeLabels[b.type as keyof typeof workoutBlockTypeLabels] ?? b.type}
-                </span>
-                {" — "}
-                {b.label ||
-                  [
-                    b.repetitions && `${b.repetitions}x`,
-                    b.distanceMeters && `${b.distanceMeters}m`,
-                    b.durationSeconds && `${Math.round(b.durationSeconds / 60)}min`,
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                {b.recoveryDurationSeconds ? ` · récup ${b.recoveryDurationSeconds}s` : ""}
-                {b.vmaPercent ? ` · ${b.vmaPercent}% VMA` : ""}
-                {b.vmaPercent && athleteVma
-                  ? ` (≈ ${secondsToClock(paceFromVmaPercent(athleteVma, b.vmaPercent))}/km)`
-                  : ""}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <WorkoutRowActions workout={workout} athleteId={athleteId} athleteVma={athleteVma} />
-    </div>
-  )
-}

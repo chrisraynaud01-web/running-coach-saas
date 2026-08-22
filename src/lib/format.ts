@@ -25,6 +25,17 @@ export function formatDate(date: Date | string) {
   })
 }
 
+export function calculateAge(birthDate: Date | string) {
+  const bd = new Date(birthDate)
+  const today = new Date()
+  let age = today.getFullYear() - bd.getFullYear()
+  const hasHadBirthdayThisYear =
+    today.getMonth() > bd.getMonth() ||
+    (today.getMonth() === bd.getMonth() && today.getDate() >= bd.getDate())
+  if (!hasHadBirthdayThisYear) age -= 1
+  return age
+}
+
 export function formatDateTime(date: Date | string) {
   return new Date(date).toLocaleString("fr-FR", {
     day: "2-digit",
