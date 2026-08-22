@@ -55,7 +55,7 @@ export const workoutBlockSchema = z.object({
   sets: integerField,
   repetitions: integerField,
   distanceMeters: integerField,
-  durationSeconds: integerField,
+  durationManual: clockField,
   vmaPercent: integerField,
   paceManual: clockField,
   recoveryDuration: clockField,
@@ -76,3 +76,17 @@ export const workoutSchema = z.object({
 })
 
 export type WorkoutInput = z.infer<typeof workoutSchema>
+
+// Même séance planifiée pour plusieurs athlètes à la fois — chaque athlète reçoit sa propre
+// séance, avec l'allure des blocs recalculée à partir de sa propre VMA.
+export const bulkWorkoutSchema = z.object({
+  athleteIds: z.array(z.string().min(1)).min(1, "Sélectionne au moins un athlète"),
+  title: z.string().min(1, "Titre requis").max(150),
+  type: z.enum(workoutTypeValues),
+  scheduledDate: z.string().min(1, "Date requise"),
+  timeOfDay: z.enum(TIME_OF_DAY_VALUES),
+  coachNotes: z.string().max(2000).optional().or(z.literal("")),
+  blocks: z.array(workoutBlockSchema).max(20),
+})
+
+export type BulkWorkoutInput = z.infer<typeof bulkWorkoutSchema>

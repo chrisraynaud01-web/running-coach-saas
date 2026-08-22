@@ -80,6 +80,7 @@ export async function getDashboardData(coachId: string, athleteId?: string) {
     select: {
       id: true,
       title: true,
+      type: true,
       status: true,
       scheduledDate: true,
       athleteId: true,
@@ -91,6 +92,7 @@ export async function getDashboardData(coachId: string, athleteId?: string) {
   const calendarSessions: CalendarSession[] = calendarWorkouts.map((w) => ({
     id: w.id,
     title: w.title,
+    type: w.type,
     status: w.status,
     scheduledDate: w.scheduledDate,
     athleteId: w.athleteId,

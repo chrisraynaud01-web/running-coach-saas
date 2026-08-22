@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { CheckCircle2, XCircle } from "lucide-react"
 import {
   startOfMonth,
   endOfMonth,
@@ -12,21 +13,17 @@ import {
 } from "date-fns"
 import { cn } from "@/lib/utils"
 import { formatMonthLabel } from "@/lib/format"
+import { workoutTypeColor, workoutTypeLegend } from "@/lib/workout-summary"
+import { workoutTypeValues } from "@/lib/validations/workout"
 
 export type CalendarSession = {
   id: string
   title: string
+  type: string
   status: string
   scheduledDate: Date
   athleteId: string
   athleteName: string
-}
-
-const STATUS_DOT: Record<string, string> = {
-  PLANNED: "bg-[--color-chart-1]",
-  COMPLETED: "bg-[--color-good]",
-  SKIPPED: "bg-[--color-critical]",
-  MODIFIED: "bg-[--color-warning]",
 }
 
 const WEEKDAY_LABELS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
@@ -86,9 +83,24 @@ export function MonthCalendar({
               </p>
               <div className="space-y-0.5">
                 {visible.map((s) => {
+                  const dotColor = workoutTypeColor[s.type as (typeof workoutTypeValues)[number]] ?? "var(--muted-foreground)"
                   const content = (
-                    <span className="flex items-center gap-1 truncate rounded bg-muted/60 px-1 py-0.5 text-[11px] leading-tight text-foreground/90 hover:bg-muted">
-                      <span className={cn("size-1.5 shrink-0 rounded-full", STATUS_DOT[s.status] ?? "bg-muted-foreground")} />
+                    <span
+                      className={cn(
+                        "flex items-center gap-1 truncate rounded bg-muted/60 px-1 py-0.5 text-[11px] leading-tight text-foreground/90 hover:bg-muted",
+                        s.status === "SKIPPED" && "text-muted-foreground line-through opacity-70"
+                      )}
+                    >
+                      {s.status === "COMPLETED" ? (
+                        <CheckCircle2 className="size-2.5 shrink-0 text-[--color-good]" />
+                      ) : s.status === "SKIPPED" ? (
+                        <XCircle className="size-2.5 shrink-0 text-[--color-critical]" />
+                      ) : (
+                        <span
+                          className="size-1.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: dotColor }}
+                        />
+                      )}
                       <span className="truncate">
                         {showAthleteName ? `${s.athleteName} — ${s.title}` : s.title}
                       </span>
@@ -112,6 +124,24 @@ export function MonthCalendar({
           )
         })}
       </div>
+      <CalendarLegend sessions={sessions} />
+    </div>
+  )
+}
+
+function CalendarLegend({ sessions }: { sessions: CalendarSession[] }) {
+  const typesInUse = new Set(sessions.map((s) => s.type))
+  const entries = workoutTypeLegend.filter((t) => typesInUse.has(t.type))
+  if (entries.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t bg-muted/20 px-2 py-1.5 text-[11px] text-muted-foreground">
+      {entries.map((t) => (
+        <span key={t.type} className="flex items-center gap-1">
+          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: t.color }} />
+          {t.label}
+        </span>
+      ))}
     </div>
   )
 }

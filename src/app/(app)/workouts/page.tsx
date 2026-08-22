@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { getCurrentCoach } from "@/lib/current-coach"
 import { Card, CardContent } from "@/components/ui/card"
 import { WorkoutsFilterBar } from "@/components/workouts/workouts-filter-bar"
+import { BulkWorkoutDialog } from "@/components/workouts/bulk-workout-dialog"
 import { WorkoutListItem } from "@/components/athletes/workout-list-item"
 
 function dateRangeForPeriod(period: string) {
@@ -66,7 +67,10 @@ export default async function WorkoutsPage({
             {athletes.length > 1 ? "s" : ""}.
           </p>
         </div>
-        <WorkoutsFilterBar athletes={athletes} />
+        <div className="flex flex-wrap items-center gap-2">
+          <WorkoutsFilterBar athletes={athletes} />
+          <BulkWorkoutDialog athletes={athletes} />
+        </div>
       </div>
 
       <Card>

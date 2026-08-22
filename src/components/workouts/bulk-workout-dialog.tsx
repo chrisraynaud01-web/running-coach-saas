@@ -10,6 +10,7 @@ import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -34,122 +35,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  workoutSchema,
-  workoutTypeValues,
-  workoutTypeLabels,
-  type WorkoutInput,
-} from "@/lib/validations/workout"
-import { createWorkout, updateWorkout } from "@/app/(app)/athletes/[id]/actions"
-import { secondsToClock, timeOfDayFromDate, TIME_OF_DAY_VALUES, timeOfDayLabels } from "@/lib/time"
+import { bulkWorkoutSchema, workoutTypeValues, workoutTypeLabels } from "@/lib/validations/workout"
+import { createWorkoutForAthletes } from "@/app/(app)/workouts/actions"
+import { TIME_OF_DAY_VALUES, timeOfDayLabels } from "@/lib/time"
 import { WorkoutBlocksEditor } from "@/components/athletes/workout-blocks-editor"
 
-export type WorkoutRecord = {
-  id: string
-  title: string
-  type: string
-  scheduledDate: Date | string
-  plannedDistanceMeters: number | null
-  plannedDurationSeconds: number | null
-  coachNotes: string | null
-  blocks: {
-    type: string
-    label: string | null
-    sets: number | null
-    repetitions: number | null
-    distanceMeters: number | null
-    durationSeconds: number | null
-    vmaPercent: number | null
-    paceTargetSecPerKm: number | null
-    recoveryDurationSeconds: number | null
-    recoveryBetweenSetsSeconds: number | null
-    intensity: string | null
-  }[]
-}
+type Athlete = { id: string; firstName: string; lastName: string }
 
 function toDateInputValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0")
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
-function defaultValuesFor(athleteId: string, workout?: WorkoutRecord): WorkoutInput {
-  if (!workout) {
-    return {
-      athleteId,
-      title: "",
-      type: "ENDURANCE_FONDAMENTALE",
-      scheduledDate: toDateInputValue(new Date()),
-      timeOfDay: "MORNING",
-      coachNotes: "",
-      blocks: [],
-    }
-  }
-
-  const scheduled = new Date(workout.scheduledDate)
-
+function defaultValues() {
   return {
-    athleteId,
-    title: workout.title,
-    type: workout.type as WorkoutInput["type"],
-    scheduledDate: toDateInputValue(scheduled),
-    timeOfDay: timeOfDayFromDate(scheduled),
-    coachNotes: workout.coachNotes ?? "",
-    blocks: workout.blocks.map((b) => ({
-      type: b.type as WorkoutInput["blocks"][number]["type"],
-      label: b.label ?? "",
-      sets: b.sets != null ? String(b.sets) : "",
-      repetitions: b.repetitions != null ? String(b.repetitions) : "",
-      distanceMeters: b.distanceMeters != null ? String(b.distanceMeters) : "",
-      // Si la durée n'a pas pu être déduite d'une allure (pas de distance/pace), elle a été saisie
-      // directement par le coach (ex : 20 min d'échauffement).
-      durationManual: !b.paceTargetSecPerKm && b.durationSeconds ? secondsToClock(b.durationSeconds) : "",
-      vmaPercent: b.vmaPercent != null ? String(b.vmaPercent) : "",
-      // Si l'allure n'a pas été calculée depuis un % VMA, elle a été saisie directement par le coach.
-      paceManual: b.paceTargetSecPerKm ? secondsToClock(b.paceTargetSecPerKm) : "",
-      recoveryDuration: b.recoveryDurationSeconds ? secondsToClock(b.recoveryDurationSeconds) : "",
-      recoveryBetweenSets: b.recoveryBetweenSetsSeconds ? secondsToClock(b.recoveryBetweenSetsSeconds) : "",
-      intensity: (b.intensity ?? undefined) as WorkoutInput["blocks"][number]["intensity"],
-    })),
+    athleteIds: [] as string[],
+    title: "",
+    type: "ENDURANCE_FONDAMENTALE" as const,
+    scheduledDate: toDateInputValue(new Date()),
+    timeOfDay: "MORNING" as const,
+    coachNotes: "",
+    blocks: [],
   }
 }
 
-type Props = {
-  athleteId: string
-  athleteVma?: number | null
-  workout?: WorkoutRecord
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-}
-
-export function WorkoutFormDialog({
-  athleteId,
-  athleteVma,
-  workout,
-  open: openProp,
-  onOpenChange: onOpenChangeProp,
-}: Props) {
-  const isEdit = !!workout
-  const isControlled = openProp !== undefined
+export function BulkWorkoutDialog({ athletes }: { athletes: Athlete[] }) {
   const router = useRouter()
-  const [internalOpen, setInternalOpen] = React.useState(false)
+  const [open, setOpen] = React.useState(false)
   const [pending, setPending] = React.useState(false)
 
-  const open = isControlled ? openProp : internalOpen
-  const setOpen = isControlled ? onOpenChangeProp! : setInternalOpen
-
   const form = useForm({
-    resolver: zodResolver(workoutSchema),
-    defaultValues: defaultValuesFor(athleteId, workout),
+    resolver: zodResolver(bulkWorkoutSchema),
+    defaultValues: defaultValues(),
   })
 
   React.useEffect(() => {
-    if (open) form.reset(defaultValuesFor(athleteId, workout))
+    if (open) form.reset(defaultValues())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  const selectedIds = form.watch("athleteIds")
+
   const onSubmit = form.handleSubmit(async (values) => {
     setPending(true)
-    const result = isEdit ? await updateWorkout(workout.id, values) : await createWorkout(values)
+    const result = await createWorkoutForAthletes(values)
     setPending(false)
 
     if (!result.success) {
@@ -157,31 +86,70 @@ export function WorkoutFormDialog({
       return
     }
 
-    toast.success(isEdit ? "Séance mise à jour." : "Séance ajoutée.")
+    toast.success(
+      `Séance ajoutée pour ${result.count} athlète${result.count > 1 ? "s" : ""}.`
+    )
     setOpen(false)
     router.refresh()
   })
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {!isControlled && (
-        <DialogTrigger render={<Button size="sm" />}>
-          <Plus className="size-4" />
-          Ajouter une séance
-        </DialogTrigger>
-      )}
+      <DialogTrigger render={<Button size="sm" />}>
+        <Plus className="size-4" />
+        Nouvelle séance
+      </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Modifier la séance" : "Nouvelle séance"}</DialogTitle>
+          <DialogTitle>Nouvelle séance</DialogTitle>
           <DialogDescription>
-            {isEdit
-              ? "Mets à jour le titre, la date ou la structure de la séance."
-              : "Planifie une séance pour cet athlète. Ajoute des blocs (échauffement, corps de séance, retour au calme) pour un format libre — par exemple 2 x (4 x 600m à VMA, récup 1'15) avec 3' entre les séries. La distance et la durée totales sont calculées automatiquement à partir des blocs."}
+            Planifie une séance pour un ou plusieurs athlètes en une fois. La même structure de
+            blocs est appliquée à chacun, mais l&apos;allure en % VMA est recalculée
+            individuellement à partir de la VMA de chaque athlète.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={onSubmit} className="space-y-5">
+            <FormField
+              control={form.control}
+              name="athleteIds"
+              render={() => (
+                <FormItem>
+                  <FormLabel>
+                    Athlètes {selectedIds.length > 0 && `(${selectedIds.length} sélectionné${selectedIds.length > 1 ? "s" : ""})`}
+                  </FormLabel>
+                  <FormControl>
+                    <div className="grid max-h-40 grid-cols-2 gap-1.5 overflow-y-auto rounded-md border p-2 sm:grid-cols-3">
+                      {athletes.map((a) => {
+                        const checked = selectedIds.includes(a.id)
+                        return (
+                          <label
+                            key={a.id}
+                            className="flex items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-muted/50"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(value) => {
+                                const next = value
+                                  ? [...selectedIds, a.id]
+                                  : selectedIds.filter((id) => id !== a.id)
+                                form.setValue("athleteIds", next, { shouldValidate: true })
+                              }}
+                            />
+                            <span className="truncate">
+                              {a.firstName} {a.lastName}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="title"
@@ -268,7 +236,11 @@ export function WorkoutFormDialog({
               />
             </div>
 
-            <WorkoutBlocksEditor control={form.control} athleteVma={athleteVma} />
+            <WorkoutBlocksEditor
+              control={form.control}
+              bulk
+              athleteVmaNote="L'allure en % VMA sera calculée séparément pour chaque athlète sélectionné, à partir de sa propre VMA."
+            />
 
             <FormField
               control={form.control}
@@ -286,7 +258,7 @@ export function WorkoutFormDialog({
 
             <DialogFooter>
               <Button type="submit" disabled={pending}>
-                {pending ? "Enregistrement..." : isEdit ? "Enregistrer" : "Ajouter la séance"}
+                {pending ? "Enregistrement..." : "Ajouter la séance"}
               </Button>
             </DialogFooter>
           </form>

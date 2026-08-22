@@ -35,6 +35,7 @@ export default async function CalendarPage({
       select: {
         id: true,
         title: true,
+        type: true,
         status: true,
         scheduledDate: true,
         athleteId: true,
@@ -47,6 +48,7 @@ export default async function CalendarPage({
   const sessions: CalendarSession[] = workouts.map((w) => ({
     id: w.id,
     title: w.title,
+    type: w.type,
     status: w.status,
     scheduledDate: w.scheduledDate,
     athleteId: w.athleteId,

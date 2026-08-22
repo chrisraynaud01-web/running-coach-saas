@@ -83,7 +83,9 @@ export function WorkoutListItem({
                   </span>
                   {" — "}
                   {formatBlockSummary(b)}
-                  {b.durationSeconds ? ` (${secondsToClock(b.durationSeconds)}/rep)` : ""}
+                  {b.durationSeconds
+                    ? ` (${secondsToClock(b.durationSeconds)}${reps > 1 ? "/rep" : ""})`
+                    : ""}
                   {reps > 1 && filledReps.length > 0 ? (
                     <span className="text-foreground/80">
                       {" · réalisé "}

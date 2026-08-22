@@ -55,6 +55,13 @@ export function durationFromPaceAndDistance(paceSecPerKm?: number, distanceMeter
   return Math.round((paceSecPerKm * distanceMeters) / 1000)
 }
 
+// Pourcentage de VMA à partir d'une allure (secondes/km) et de la VMA (km/h) — inverse de paceFromVmaPercent.
+export function vmaPercentFromPace(vma?: number, paceSecPerKm?: number): number | undefined {
+  if (!vma || !paceSecPerKm) return undefined
+  const speedKmh = 3600 / paceSecPerKm
+  return Math.round((speedKmh / vma) * 100)
+}
+
 // Séances plutôt notées par créneau (matin / après-midi / soir) que par heure précise —
 // utile pour les athlètes qui enchaînent deux séances la même journée.
 export const TIME_OF_DAY_VALUES = ["MORNING", "AFTERNOON", "EVENING"] as const
