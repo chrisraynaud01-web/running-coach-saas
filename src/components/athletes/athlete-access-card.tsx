@@ -15,14 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { createAthleteAccess } from "@/app/(app)/athletes/actions"
+import { createAthleteAccess, resetAthleteAccessPassword } from "@/app/(app)/athletes/actions"
 
 export function AthleteAccessCard({
   athleteId,
   hasAccess,
+  accessEmail,
 }: {
   athleteId: string
   hasAccess: boolean
+  accessEmail?: string
 }) {
   const router = useRouter()
   const [pending, setPending] = React.useState(false)
@@ -44,6 +46,20 @@ export function AthleteAccessCard({
     router.refresh()
   }
 
+  async function handleReset() {
+    setPending(true)
+    const result = await resetAthleteAccessPassword(athleteId)
+    setPending(false)
+
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+
+    setCredentials({ email: result.email, password: result.password })
+    router.refresh()
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center gap-2 space-y-0">
@@ -52,10 +68,20 @@ export function AthleteAccessCard({
       </CardHeader>
       <CardContent>
         {hasAccess ? (
-          <p className="flex items-center gap-1.5 text-sm text-[--color-good]">
-            <CheckCircle2 className="size-4" />
-            Accès activé — l&apos;athlète peut se connecter à son espace.
-          </p>
+          <div className="space-y-2">
+            <p className="flex items-center gap-1.5 text-sm text-[--color-good]">
+              <CheckCircle2 className="size-4" />
+              Accès activé
+            </p>
+            {accessEmail && (
+              <p className="text-xs text-muted-foreground">
+                Connexion avec : <span className="font-mono">{accessEmail}</span>
+              </p>
+            )}
+            <Button size="sm" variant="outline" disabled={pending} onClick={handleReset}>
+              {pending ? "..." : "Réinitialiser le mot de passe"}
+            </Button>
+          </div>
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
@@ -71,7 +97,7 @@ export function AthleteAccessCard({
       <Dialog open={!!credentials} onOpenChange={(open) => !open && setCredentials(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Accès créé</DialogTitle>
+            <DialogTitle>Identifiants</DialogTitle>
             <DialogDescription>
               Communique ces identifiants à ton athlète. Ils ne seront plus affichés ensuite.
             </DialogDescription>

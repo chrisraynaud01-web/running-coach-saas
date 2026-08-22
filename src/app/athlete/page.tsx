@@ -7,7 +7,7 @@ import { JournalEntryDialog } from "@/components/athlete/journal-entry-dialog"
 import { MarkCompleteButton } from "@/components/athlete/mark-complete-button"
 import { WorkoutResultDialog } from "@/components/athlete/workout-result-dialog"
 import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
-import { formatDateTime, formatDistance, formatDuration } from "@/lib/format"
+import { formatWorkoutSchedule, formatDistance, formatDuration } from "@/lib/format"
 
 export default async function AthletePlanningPage() {
   const athlete = await getCurrentAthlete()
@@ -51,7 +51,7 @@ export default async function AthletePlanningPage() {
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {formatDateTime(w.scheduledDate)} · {formatDistance(w.plannedDistanceMeters)} ·{" "}
+                  {formatWorkoutSchedule(w.scheduledDate)} · {formatDistance(w.plannedDistanceMeters)} ·{" "}
                   {formatDuration(w.plannedDurationSeconds)}
                 </p>
                 {w.blocks.length > 0 && (
@@ -118,7 +118,7 @@ export default async function AthletePlanningPage() {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {formatDateTime(w.scheduledDate)} · {formatDistance(w.plannedDistanceMeters)} ·{" "}
+                  {formatWorkoutSchedule(w.scheduledDate)} · {formatDistance(w.plannedDistanceMeters)} ·{" "}
                   {formatDuration(w.plannedDurationSeconds)}
                 </p>
                 {w.blocks.some((b) => b.actualDurationSeconds || b.actualNotes) && (

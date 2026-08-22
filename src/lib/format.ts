@@ -44,3 +44,25 @@ export function formatDateTime(date: Date | string) {
     minute: "2-digit",
   })
 }
+
+// Les séances sont notées par créneau (matin / après-midi / soir), pas par heure précise.
+export function formatWorkoutSchedule(date: Date | string) {
+  const d = new Date(date)
+  const h = d.getHours()
+  const label = h < 11 ? "Matin" : h < 17 ? "Après-midi" : "Soir"
+  return `${formatDate(d)} · ${label}`
+}
+
+export function formatMemberSince(createdAt: Date | string) {
+  const start = new Date(createdAt)
+  const now = new Date()
+  let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
+  if (now.getDate() < start.getDate()) months -= 1
+  if (months <= 0) return "Inscrit ce mois-ci"
+  if (months < 12) return `Membre depuis ${months} mois`
+  const years = Math.floor(months / 12)
+  const remMonths = months % 12
+  return remMonths === 0
+    ? `Membre depuis ${years} an${years > 1 ? "s" : ""}`
+    : `Membre depuis ${years} an${years > 1 ? "s" : ""} et ${remMonths} mois`
+}

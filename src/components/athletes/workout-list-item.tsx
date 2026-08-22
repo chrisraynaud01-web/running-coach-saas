@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { WorkoutRowActions } from "@/components/athletes/workout-row-actions"
 import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
-import { formatDateTime, formatDistance, formatDuration } from "@/lib/format"
+import { formatWorkoutSchedule, formatDistance, formatDuration } from "@/lib/format"
 import { paceFromVmaPercent, secondsToClock } from "@/lib/time"
 
 export type WorkoutListItemData = {
@@ -63,7 +63,7 @@ export function WorkoutListItem({
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          {formatDateTime(workout.scheduledDate)} · {formatDistance(workout.plannedDistanceMeters)} ·{" "}
+          {formatWorkoutSchedule(workout.scheduledDate)} · {formatDistance(workout.plannedDistanceMeters)} ·{" "}
           {formatDuration(workout.plannedDurationSeconds)}
         </p>
         {workout.blocks.length > 0 && (

@@ -48,3 +48,38 @@ export function paceFromVmaPercent(vma?: number, vmaPercent?: number): number | 
   if (speedKmh <= 0) return undefined
   return Math.round(3600 / speedKmh)
 }
+
+// Durée (secondes) pour parcourir une distance (m) à une allure donnée (secondes/km).
+export function durationFromPaceAndDistance(paceSecPerKm?: number, distanceMeters?: number): number | undefined {
+  if (!paceSecPerKm || !distanceMeters) return undefined
+  return Math.round((paceSecPerKm * distanceMeters) / 1000)
+}
+
+// Séances plutôt notées par créneau (matin / après-midi / soir) que par heure précise —
+// utile pour les athlètes qui enchaînent deux séances la même journée.
+export const TIME_OF_DAY_VALUES = ["MORNING", "AFTERNOON", "EVENING"] as const
+export type TimeOfDay = (typeof TIME_OF_DAY_VALUES)[number]
+
+export const timeOfDayLabels: Record<TimeOfDay, string> = {
+  MORNING: "Matin",
+  AFTERNOON: "Après-midi",
+  EVENING: "Soir",
+}
+
+const TIME_OF_DAY_HOUR: Record<TimeOfDay, number> = {
+  MORNING: 7,
+  AFTERNOON: 13,
+  EVENING: 18,
+}
+
+export function combineDateAndTimeOfDay(dateStr: string, timeOfDay: TimeOfDay): Date {
+  const [y, m, d] = dateStr.split("-").map(Number)
+  return new Date(y, (m || 1) - 1, d || 1, TIME_OF_DAY_HOUR[timeOfDay], 0, 0)
+}
+
+export function timeOfDayFromDate(date: Date): TimeOfDay {
+  const h = date.getHours()
+  if (h < 11) return "MORNING"
+  if (h < 17) return "AFTERNOON"
+  return "EVENING"
+}

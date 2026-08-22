@@ -142,6 +142,27 @@ export async function createAthleteAccess(athleteId: string) {
   return { success: true as const, email: athlete.email, password: tempPassword }
 }
 
+export async function resetAthleteAccessPassword(athleteId: string) {
+  const coach = await getCurrentCoach()
+
+  const athlete = await prisma.athlete.findUnique({
+    where: { id: athleteId, coachId: coach.id },
+  })
+  if (!athlete?.userId) {
+    return { success: false as const, error: "Cet athlète n'a pas encore d'accès." }
+  }
+
+  const tempPassword = generateTempPassword()
+  const passwordHash = await bcrypt.hash(tempPassword, 10)
+
+  await prisma.user.update({
+    where: { id: athlete.userId },
+    data: { passwordHash },
+  })
+
+  return { success: true as const, email: athlete.email, password: tempPassword }
+}
+
 export async function archiveAthlete(athleteId: string) {
   const coach = await getCurrentCoach()
 

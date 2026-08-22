@@ -1,5 +1,6 @@
 import { z } from "zod"
-import { decimalField, integerField } from "./shared"
+import { integerField } from "./shared"
+import { TIME_OF_DAY_VALUES } from "@/lib/time"
 
 export const workoutTypeValues = [
   "ENDURANCE_FONDAMENTALE",
@@ -54,7 +55,6 @@ export const workoutBlockSchema = z.object({
   repetitions: integerField,
   distanceMeters: integerField,
   durationSeconds: integerField,
-  recoveryDurationSeconds: integerField,
   vmaPercent: integerField,
   intensity: z.enum(intensityValues).optional(),
 })
@@ -66,8 +66,7 @@ export const workoutSchema = z.object({
   title: z.string().min(1, "Titre requis").max(150),
   type: z.enum(workoutTypeValues),
   scheduledDate: z.string().min(1, "Date requise"),
-  plannedDistanceKm: decimalField,
-  plannedDurationMin: integerField,
+  timeOfDay: z.enum(TIME_OF_DAY_VALUES),
   coachNotes: z.string().max(2000).optional().or(z.literal("")),
   blocks: z.array(workoutBlockSchema).max(20),
 })

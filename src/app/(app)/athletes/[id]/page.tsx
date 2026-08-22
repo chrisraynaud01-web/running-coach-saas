@@ -12,7 +12,10 @@ import { AthleteActionsMenu } from "@/components/athletes/athlete-actions-menu"
 import { MetricsFormDialog } from "@/components/athletes/metrics-form-dialog"
 import { AthleteAccessCard } from "@/components/athletes/athlete-access-card"
 import { WorkoutListItem } from "@/components/athletes/workout-list-item"
-import { calculateAge, formatDate, formatPace } from "@/lib/format"
+import { GoalFormDialog } from "@/components/athletes/goal-form-dialog"
+import { AthleteEvolutionCard } from "@/components/athletes/athlete-evolution-card"
+import { goalStatusLabels } from "@/lib/validations/goal"
+import { calculateAge, formatDate, formatPace, formatMemberSince } from "@/lib/format"
 
 export default async function AthleteDetailPage({
   params,
@@ -26,7 +29,7 @@ export default async function AthleteDetailPage({
     where: { id, coachId: coach.id },
     include: {
       goals: { orderBy: { createdAt: "desc" } },
-      metricsHistory: { orderBy: { recordedAt: "desc" }, take: 1 },
+      metricsHistory: { orderBy: { recordedAt: "desc" } },
       workouts: {
         orderBy: { scheduledDate: "desc" },
         take: 20,
@@ -82,6 +85,7 @@ export default async function AthleteDetailPage({
                   {calculateAge(athlete.birthDate)} ans)
                 </span>
               )}
+              <span>{formatMemberSince(athlete.createdAt)}</span>
             </div>
           </div>
         </div>
@@ -110,10 +114,15 @@ export default async function AthleteDetailPage({
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               <Target className="size-4" /> Objectif principal
             </CardTitle>
+            {primaryGoal ? (
+              <GoalFormDialog athleteId={athlete.id} goal={primaryGoal} />
+            ) : (
+              <GoalFormDialog athleteId={athlete.id} defaultPrimary />
+            )}
           </CardHeader>
           <CardContent>
             {primaryGoal ? (
@@ -135,26 +144,36 @@ export default async function AthleteDetailPage({
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-semibold">Historique des objectifs</CardTitle>
+            {athlete.goals.length > 0 && <GoalFormDialog athleteId={athlete.id} />}
           </CardHeader>
           <CardContent className="space-y-2">
             {athlete.goals.length === 0 && (
               <p className="text-sm text-muted-foreground">Aucun historique.</p>
             )}
             {athlete.goals.map((g) => (
-              <div key={g.id} className="flex items-center justify-between text-sm">
+              <div key={g.id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="truncate">{g.title}</span>
-                <Badge variant="outline" className="shrink-0 text-xs">
-                  {g.status === "ACTIVE" ? "En cours" : g.status === "ACHIEVED" ? "Atteint" : "Abandonné"}
-                </Badge>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Badge variant="outline" className="text-xs">
+                    {goalStatusLabels[g.status as keyof typeof goalStatusLabels] ?? g.status}
+                  </Badge>
+                  <GoalFormDialog athleteId={athlete.id} goal={g} />
+                </div>
               </div>
             ))}
           </CardContent>
         </Card>
 
-        <AthleteAccessCard athleteId={athlete.id} hasAccess={!!athlete.userId} />
+        <AthleteAccessCard
+          athleteId={athlete.id}
+          hasAccess={!!athlete.userId}
+          accessEmail={athlete.email}
+        />
       </div>
+
+      <AthleteEvolutionCard history={athlete.metricsHistory} />
 
       <Card>
         <CardHeader>

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { useFieldArray, useForm, useWatch, type Control } from "react-hook-form"
+import { useFieldArray, useForm, useFormContext, useWatch, type Control } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 import { Plus, X, GripVertical } from "lucide-react"
@@ -61,7 +61,14 @@ import {
   type WorkoutInput,
 } from "@/lib/validations/workout"
 import { createWorkout, updateWorkout } from "@/app/(app)/athletes/[id]/actions"
-import { paceFromVmaPercent, secondsToClock } from "@/lib/time"
+import {
+  paceFromVmaPercent,
+  durationFromPaceAndDistance,
+  secondsToClock,
+  timeOfDayFromDate,
+  TIME_OF_DAY_VALUES,
+  timeOfDayLabels,
+} from "@/lib/time"
 import { cn } from "@/lib/utils"
 
 export type WorkoutRecord = {
@@ -78,17 +85,14 @@ export type WorkoutRecord = {
     repetitions: number | null
     distanceMeters: number | null
     durationSeconds: number | null
-    recoveryDurationSeconds: number | null
     vmaPercent: number | null
     intensity: string | null
   }[]
 }
 
-function toLocalDatetimeInputValue(date: Date) {
+function toDateInputValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
-    date.getHours()
-  )}:${pad(date.getMinutes())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 function defaultValuesFor(athleteId: string, workout?: WorkoutRecord): WorkoutInput {
@@ -97,23 +101,21 @@ function defaultValuesFor(athleteId: string, workout?: WorkoutRecord): WorkoutIn
       athleteId,
       title: "",
       type: "ENDURANCE_FONDAMENTALE",
-      scheduledDate: toLocalDatetimeInputValue(new Date()),
+      scheduledDate: toDateInputValue(new Date()),
+      timeOfDay: "MORNING",
       coachNotes: "",
       blocks: [],
     }
   }
 
+  const scheduled = new Date(workout.scheduledDate)
+
   return {
     athleteId,
     title: workout.title,
     type: workout.type as WorkoutInput["type"],
-    scheduledDate: toLocalDatetimeInputValue(new Date(workout.scheduledDate)),
-    plannedDistanceKm: workout.plannedDistanceMeters
-      ? String(workout.plannedDistanceMeters / 1000)
-      : "",
-    plannedDurationMin: workout.plannedDurationSeconds
-      ? String(Math.round(workout.plannedDurationSeconds / 60))
-      : "",
+    scheduledDate: toDateInputValue(scheduled),
+    timeOfDay: timeOfDayFromDate(scheduled),
     coachNotes: workout.coachNotes ?? "",
     blocks: workout.blocks.map((b) => ({
       type: b.type as WorkoutInput["blocks"][number]["type"],
@@ -121,7 +123,6 @@ function defaultValuesFor(athleteId: string, workout?: WorkoutRecord): WorkoutIn
       repetitions: b.repetitions != null ? String(b.repetitions) : "",
       distanceMeters: b.distanceMeters != null ? String(b.distanceMeters) : "",
       durationSeconds: b.durationSeconds != null ? String(b.durationSeconds) : "",
-      recoveryDurationSeconds: b.recoveryDurationSeconds != null ? String(b.recoveryDurationSeconds) : "",
       vmaPercent: b.vmaPercent != null ? String(b.vmaPercent) : "",
       intensity: (b.intensity ?? undefined) as WorkoutInput["blocks"][number]["intensity"],
     })),
@@ -210,7 +211,7 @@ export function WorkoutFormDialog({
           <DialogDescription>
             {isEdit
               ? "Mets à jour le titre, la date ou la structure de la séance."
-              : "Planifie une séance pour cet athlète. Ajoute des blocs (échauffement, corps de séance, retour au calme) pour un format libre — par exemple 10 x 400m à VMA avec récupération."}
+              : "Planifie une séance pour cet athlète. Ajoute des blocs (échauffement, corps de séance, retour au calme) pour un format libre — par exemple 10 x 400m à VMA. La distance et la durée totales sont calculées automatiquement à partir des blocs."}
           </DialogDescription>
         </DialogHeader>
 
@@ -230,7 +231,7 @@ export function WorkoutFormDialog({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <FormField
                 control={form.control}
                 name="type"
@@ -264,25 +265,9 @@ export function WorkoutFormDialog({
                 name="scheduledDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Date &amp; heure</FormLabel>
+                    <FormLabel>Date</FormLabel>
                     <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="plannedDistanceKm"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Distance totale (km)</FormLabel>
-                    <FormControl>
-                      <Input type="number" step="0.1" placeholder="10" {...field} />
+                      <Input type="date" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -290,13 +275,28 @@ export function WorkoutFormDialog({
               />
               <FormField
                 control={form.control}
-                name="plannedDurationMin"
+                name="timeOfDay"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Durée totale (min)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="45" {...field} />
-                    </FormControl>
+                    <FormLabel>Créneau</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue>
+                            {(value: string | null) =>
+                              value ? timeOfDayLabels[value as (typeof TIME_OF_DAY_VALUES)[number]] : ""
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {TIME_OF_DAY_VALUES.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {timeOfDayLabels[t]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -331,7 +331,6 @@ export function WorkoutFormDialog({
                       repetitions: "",
                       distanceMeters: "",
                       durationSeconds: "",
-                      recoveryDurationSeconds: "",
                       vmaPercent: "",
                       intensity: undefined,
                     })
@@ -344,8 +343,9 @@ export function WorkoutFormDialog({
 
               {fields.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Aucun bloc — la séance restera décrite par son titre et sa distance/durée
-                  globale. Ajoute un bloc pour détailler, ex : « 10 x 400m » avec récupération.
+                  Aucun bloc. Ajoute un bloc par étape de la séance — échauffement, corps de
+                  séance (ex : « 10 x 400m »), retour au calme, ou même la récupération entre
+                  répétitions comme un bloc à part entière.
                 </p>
               )}
 
@@ -437,7 +437,21 @@ function BlockRow({
   onRemove: () => void
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>
 }) {
+  const { setValue } = useFormContext<WorkoutInput>()
   const vmaPercentValue = useWatch({ control, name: `blocks.${index}.vmaPercent` })
+  const distanceValue = useWatch({ control, name: `blocks.${index}.distanceMeters` })
+
+  const pace =
+    athleteVma && Number(vmaPercentValue) ? paceFromVmaPercent(athleteVma, Number(vmaPercentValue)) : undefined
+  const computedDuration =
+    pace && Number(distanceValue) ? durationFromPaceAndDistance(pace, Number(distanceValue)) : undefined
+
+  React.useEffect(() => {
+    if (computedDuration) {
+      setValue(`blocks.${index}.durationSeconds`, String(computedDuration))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [computedDuration, index])
 
   return (
     <div className="space-y-2.5 rounded-md border bg-background p-3">
@@ -497,7 +511,7 @@ function BlockRow({
         )}
       />
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <FormField
           control={control}
           name={`blocks.${index}.repetitions`}
@@ -522,30 +536,25 @@ function BlockRow({
             </FormItem>
           )}
         />
-        <FormField
-          control={control}
-          name={`blocks.${index}.durationSeconds`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-muted-foreground">Durée (sec)</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="90" className="h-8 text-sm" {...field} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={`blocks.${index}.recoveryDurationSeconds`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-muted-foreground">Récup (sec)</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="90" className="h-8 text-sm" {...field} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
+        {computedDuration ? (
+          <FormItem>
+            <FormLabel className="text-xs text-muted-foreground">Durée (auto)</FormLabel>
+            <p className="flex h-8 items-center text-sm font-medium">{secondsToClock(computedDuration)}</p>
+          </FormItem>
+        ) : (
+          <FormField
+            control={control}
+            name={`blocks.${index}.durationSeconds`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-muted-foreground">Durée (sec)</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="90" className="h-8 text-sm" {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        )}
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
@@ -566,7 +575,9 @@ function BlockRow({
             </FormItem>
           )}
         />
-        <VmaPacePreview athleteVma={athleteVma} vmaPercent={vmaPercentValue} />
+        <p className={cn("pb-2 text-xs text-muted-foreground", pace && "text-foreground")}>
+          {pace ? `≈ ${secondsToClock(pace)}/km` : "—"}
+        </p>
 
         <FormField
           control={control}
@@ -597,23 +608,5 @@ function BlockRow({
         />
       </div>
     </div>
-  )
-}
-
-function VmaPacePreview({
-  athleteVma,
-  vmaPercent,
-}: {
-  athleteVma?: number | null
-  vmaPercent?: string
-}) {
-  const pct = Number(vmaPercent)
-  const pace =
-    athleteVma && pct ? paceFromVmaPercent(athleteVma, pct) : undefined
-
-  return (
-    <p className={cn("pb-2 text-xs text-muted-foreground", pace && "text-foreground")}>
-      {pace ? `≈ ${secondsToClock(pace)}/km` : "—"}
-    </p>
   )
 }
