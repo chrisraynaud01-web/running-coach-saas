@@ -1,18 +1,11 @@
-import { CheckCircle2, CalendarCheck, Gauge } from "lucide-react"
+import { CalendarCheck, Gauge } from "lucide-react"
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns"
 import { prisma } from "@/lib/prisma"
 import { getCurrentAthlete } from "@/lib/current-athlete"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { StatCard } from "@/components/dashboard/stat-card"
 import { MonthCalendar, type CalendarSession } from "@/components/dashboard/month-calendar"
-import { JournalEntryDialog } from "@/components/athlete/journal-entry-dialog"
-import { MarkCompleteButton } from "@/components/athlete/mark-complete-button"
-import { WorkoutResultDialog } from "@/components/athlete/workout-result-dialog"
-import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
-import { formatWorkoutSchedule, formatDistance, formatDuration } from "@/lib/format"
-import { secondsToClock } from "@/lib/time"
-import { formatBlockSummary, totalReps } from "@/lib/workout-summary"
+import { WorkoutDetailDialog } from "@/components/athlete/workout-detail-dialog"
 
 export default async function AthletePlanningPage() {
   const athlete = await getCurrentAthlete()
@@ -61,7 +54,8 @@ export default async function AthletePlanningPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Mon planning</h1>
         <p className="text-sm text-muted-foreground">
-          Bonjour {athlete.firstName}, voici tes prochaines séances.
+          Bonjour {athlete.firstName}, voici tes prochaines séances. Clique sur une séance pour
+          voir le détail.
         </p>
       </div>
 
@@ -85,51 +79,12 @@ export default async function AthletePlanningPage() {
             Séances à venir ({upcoming.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent>
           {upcoming.length === 0 && (
-            <p className="text-sm text-muted-foreground">Aucune séance planifiée pour l&apos;instant.</p>
+            <p className="py-2 text-sm text-muted-foreground">Aucune séance planifiée pour l&apos;instant.</p>
           )}
           {upcoming.map((w) => (
-            <div key={w.id} className="flex items-start justify-between gap-3 border-b py-2.5 last:border-0">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-sm font-medium">{w.title}</p>
-                  <Badge variant="secondary" className="shrink-0 text-xs">
-                    {workoutTypeLabels[w.type as keyof typeof workoutTypeLabels] ?? w.type}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {formatWorkoutSchedule(w.scheduledDate)} · {formatDistance(w.plannedDistanceMeters)} ·{" "}
-                  {formatDuration(w.plannedDurationSeconds)}
-                </p>
-                {w.blocks.length > 0 && (
-                  <ul className="mt-1.5 space-y-0.5">
-                    {w.blocks.map((b) => (
-                      <li key={b.id} className="text-xs text-muted-foreground">
-                        <span className="font-medium text-foreground/80">
-                          {workoutBlockTypeLabels[b.type as keyof typeof workoutBlockTypeLabels] ?? b.type}
-                        </span>
-                        {" — "}
-                        {formatBlockSummary(b)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {w.coachNotes && (
-                  <p className="mt-1.5 rounded-md bg-muted/50 px-2 py-1 text-xs text-muted-foreground">
-                    {w.coachNotes}
-                  </p>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {w.blocks.length > 0 ? (
-                  <WorkoutResultDialog workoutId={w.id} blocks={w.blocks} />
-                ) : (
-                  <MarkCompleteButton workoutId={w.id} />
-                )}
-                <JournalEntryDialog workoutId={w.id} workoutTitle={w.title} />
-              </div>
-            </div>
+            <WorkoutDetailDialog key={w.id} workout={w} />
           ))}
         </CardContent>
       </Card>
@@ -138,60 +93,12 @@ export default async function AthletePlanningPage() {
         <CardHeader>
           <CardTitle className="text-sm font-semibold">Historique</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent>
           {past.length === 0 && (
-            <p className="text-sm text-muted-foreground">Aucune séance enregistrée pour l&apos;instant.</p>
+            <p className="py-2 text-sm text-muted-foreground">Aucune séance enregistrée pour l&apos;instant.</p>
           )}
           {past.map((w) => (
-            <div key={w.id} className="flex items-start justify-between gap-3 border-b py-2.5 last:border-0">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-sm font-medium">{w.title}</p>
-                  <Badge variant="secondary" className="shrink-0 text-xs">
-                    {workoutTypeLabels[w.type as keyof typeof workoutTypeLabels] ?? w.type}
-                  </Badge>
-                  {w.status === "COMPLETED" && (
-                    <Badge className="shrink-0 bg-[--color-good]/15 text-[--color-good] text-xs" variant="outline">
-                      <CheckCircle2 className="size-3" />
-                      Réalisée
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {formatWorkoutSchedule(w.scheduledDate)} · {formatDistance(w.plannedDistanceMeters)} ·{" "}
-                  {formatDuration(w.plannedDurationSeconds)}
-                </p>
-                {w.blocks.some(
-                  (b) => b.actualDurationSeconds || b.actualNotes || b.actualRepSecondsList.some((s) => s > 0)
-                ) && (
-                  <ul className="mt-1.5 space-y-0.5">
-                    {w.blocks
-                      .filter(
-                        (b) =>
-                          b.actualDurationSeconds || b.actualNotes || b.actualRepSecondsList.some((s) => s > 0)
-                      )
-                      .map((b) => {
-                        const reps = totalReps(b)
-                        const filledReps = b.actualRepSecondsList.filter((s) => s > 0)
-                        return (
-                          <li key={b.id} className="text-xs text-muted-foreground">
-                            <span className="font-medium text-foreground/80">
-                              {workoutBlockTypeLabels[b.type as keyof typeof workoutBlockTypeLabels] ?? b.type}
-                            </span>
-                            {reps > 1 && filledReps.length > 0
-                              ? ` — ${b.actualRepSecondsList.map((s) => (s > 0 ? secondsToClock(s) : "—")).join(", ")}`
-                              : b.actualDurationSeconds
-                                ? ` — réalisé en ${formatDuration(b.actualDurationSeconds)}`
-                                : ""}
-                            {b.actualNotes ? ` (${b.actualNotes})` : ""}
-                          </li>
-                        )
-                      })}
-                  </ul>
-                )}
-              </div>
-              <JournalEntryDialog workoutId={w.id} workoutTitle={w.title} />
-            </div>
+            <WorkoutDetailDialog key={w.id} workout={w} />
           ))}
         </CardContent>
       </Card>

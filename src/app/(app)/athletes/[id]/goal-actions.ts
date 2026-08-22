@@ -46,7 +46,7 @@ export async function createGoal(athleteId: string, input: GoalInput) {
   return { success: true as const }
 }
 
-export async function updateGoal(goalId: string, athleteId: string, input: GoalInput) {
+export async function updateGoal(athleteId: string, goalId: string, input: GoalInput) {
   const parsed = goalSchema.safeParse(input)
   if (!parsed.success) {
     return { success: false as const, error: parsed.error.issues[0]?.message ?? "Données invalides" }

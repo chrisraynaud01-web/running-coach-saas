@@ -24,6 +24,7 @@ import { workoutResultSchema } from "@/lib/validations/workout-result"
 import { submitWorkoutResult } from "@/app/athlete/actions"
 import { workoutBlockTypeLabels } from "@/lib/validations/workout"
 import { formatBlockSummary, totalReps } from "@/lib/workout-summary"
+import { secondsToClock } from "@/lib/time"
 
 export type ResultBlock = {
   id: string
@@ -36,14 +37,19 @@ export type ResultBlock = {
   paceTargetSecPerKm: number | null
   recoveryDurationSeconds: number | null
   recoveryBetweenSetsSeconds: number | null
+  actualDurationSeconds?: number | null
+  actualRepSecondsList?: number[]
+  actualNotes?: string | null
 }
 
 export function WorkoutResultDialog({
   workoutId,
   blocks,
+  isEdit = false,
 }: {
   workoutId: string
   blocks: ResultBlock[]
+  isEdit?: boolean
 }) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
@@ -53,12 +59,16 @@ export function WorkoutResultDialog({
     resolver: zodResolver(workoutResultSchema),
     defaultValues: {
       workoutId,
-      blocks: blocks.map((b) => ({
-        blockId: b.id,
-        actualDuration: "",
-        actualNotes: "",
-        actualReps: Array.from({ length: totalReps(b) }, () => ""),
-      })),
+      blocks: blocks.map((b) => {
+        const reps = totalReps(b)
+        const repSeconds = b.actualRepSecondsList ?? []
+        return {
+          blockId: b.id,
+          actualDuration: reps <= 1 && b.actualDurationSeconds ? secondsToClock(b.actualDurationSeconds) : "",
+          actualNotes: b.actualNotes ?? "",
+          actualReps: Array.from({ length: reps }, (_, i) => (repSeconds[i] > 0 ? secondsToClock(repSeconds[i]) : "")),
+        }
+      }),
     },
   })
 
@@ -74,16 +84,16 @@ export function WorkoutResultDialog({
       return
     }
 
-    toast.success("Résultat enregistré, séance marquée comme réalisée.")
+    toast.success(isEdit ? "Résultat mis à jour." : "Résultat enregistré, séance marquée comme réalisée.")
     setOpen(false)
     router.refresh()
   })
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" />}>
+      <DialogTrigger render={<Button size="sm" variant={isEdit ? "outline" : "default"} />}>
         <CheckCircle2 className="size-4" />
-        Enregistrer mon résultat
+        {isEdit ? "Modifier mon résultat" : "Enregistrer mon résultat"}
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>

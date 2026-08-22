@@ -16,6 +16,8 @@ import { GoalFormDialog } from "@/components/athletes/goal-form-dialog"
 import { AthleteEvolutionCard } from "@/components/athletes/athlete-evolution-card"
 import { goalStatusLabels } from "@/lib/validations/goal"
 import { calculateAge, formatDate, formatPace, formatMemberSince } from "@/lib/format"
+import { addAthleteMetrics } from "@/app/(app)/athletes/[id]/metrics-actions"
+import { createGoal, updateGoal } from "@/app/(app)/athletes/[id]/goal-actions"
 
 export default async function AthleteDetailPage({
   params,
@@ -99,7 +101,7 @@ export default async function AthleteDetailPage({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-semibold">Données sportives</CardTitle>
-            <MetricsFormDialog athleteId={athlete.id} />
+            <MetricsFormDialog action={addAthleteMetrics.bind(null, athlete.id)} />
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-y-3 text-sm">
             <Metric label="VMA" value={metrics?.vma ? `${metrics.vma} km/h` : "—"} />
@@ -119,9 +121,17 @@ export default async function AthleteDetailPage({
               <Target className="size-4" /> Objectif principal
             </CardTitle>
             {primaryGoal ? (
-              <GoalFormDialog athleteId={athlete.id} goal={primaryGoal} />
+              <GoalFormDialog
+                goal={primaryGoal}
+                createAction={createGoal.bind(null, athlete.id)}
+                updateAction={updateGoal.bind(null, athlete.id)}
+              />
             ) : (
-              <GoalFormDialog athleteId={athlete.id} defaultPrimary />
+              <GoalFormDialog
+                defaultPrimary
+                createAction={createGoal.bind(null, athlete.id)}
+                updateAction={updateGoal.bind(null, athlete.id)}
+              />
             )}
           </CardHeader>
           <CardContent>
@@ -146,7 +156,12 @@ export default async function AthleteDetailPage({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-semibold">Historique des objectifs</CardTitle>
-            {athlete.goals.length > 0 && <GoalFormDialog athleteId={athlete.id} />}
+            {athlete.goals.length > 0 && (
+              <GoalFormDialog
+                createAction={createGoal.bind(null, athlete.id)}
+                updateAction={updateGoal.bind(null, athlete.id)}
+              />
+            )}
           </CardHeader>
           <CardContent className="space-y-2">
             {athlete.goals.length === 0 && (
@@ -159,7 +174,11 @@ export default async function AthleteDetailPage({
                   <Badge variant="outline" className="text-xs">
                     {goalStatusLabels[g.status as keyof typeof goalStatusLabels] ?? g.status}
                   </Badge>
-                  <GoalFormDialog athleteId={athlete.id} goal={g} />
+                  <GoalFormDialog
+                    goal={g}
+                    createAction={createGoal.bind(null, athlete.id)}
+                    updateAction={updateGoal.bind(null, athlete.id)}
+                  />
                 </div>
               </div>
             ))}

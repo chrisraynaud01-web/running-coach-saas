@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { NotebookPen } from "lucide-react"
+import { NotebookPen, Pencil } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,9 +35,20 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { journalEntrySchema, type JournalEntryInput } from "@/lib/validations/journal"
-import { submitJournalEntry } from "@/app/athlete/actions"
+import { submitJournalEntry, updateJournalEntry } from "@/app/athlete/actions"
 
 const SCALE = Array.from({ length: 10 }, (_, i) => String(i + 1))
+
+export type JournalEntryRecord = {
+  id: string
+  workoutId: string | null
+  rpe: number | null
+  fatigue: number | null
+  sleepQuality: number | null
+  sleepHours: number | null
+  stress: number | null
+  comment: string | null
+}
 
 function emptyValues(workoutId?: string): JournalEntryInput {
   return {
@@ -51,30 +62,45 @@ function emptyValues(workoutId?: string): JournalEntryInput {
   }
 }
 
+function valuesFromEntry(entry: JournalEntryRecord): JournalEntryInput {
+  return {
+    workoutId: entry.workoutId ?? "",
+    rpe: entry.rpe != null ? String(entry.rpe) : "",
+    fatigue: entry.fatigue != null ? String(entry.fatigue) : "",
+    sleepQuality: entry.sleepQuality != null ? String(entry.sleepQuality) : "",
+    sleepHours: entry.sleepHours != null ? String(entry.sleepHours) : "",
+    stress: entry.stress != null ? String(entry.stress) : "",
+    comment: entry.comment ?? "",
+  }
+}
+
 export function JournalEntryDialog({
   workoutId,
   workoutTitle,
+  entry,
 }: {
   workoutId?: string
   workoutTitle?: string
+  entry?: JournalEntryRecord
 }) {
+  const isEdit = !!entry
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [pending, setPending] = React.useState(false)
 
   const form = useForm({
     resolver: zodResolver(journalEntrySchema),
-    defaultValues: emptyValues(workoutId),
+    defaultValues: entry ? valuesFromEntry(entry) : emptyValues(workoutId),
   })
 
   React.useEffect(() => {
-    if (open) form.reset(emptyValues(workoutId))
+    if (open) form.reset(entry ? valuesFromEntry(entry) : emptyValues(workoutId))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const onSubmit = form.handleSubmit(async (values) => {
     setPending(true)
-    const result = await submitJournalEntry(values)
+    const result = isEdit ? await updateJournalEntry(entry.id, values) : await submitJournalEntry(values)
     setPending(false)
 
     if (!result.success) {
@@ -82,16 +108,30 @@ export function JournalEntryDialog({
       return
     }
 
-    toast.success("Retour enregistré. Merci !")
+    toast.success(isEdit ? "Entrée mise à jour." : "Retour enregistré. Merci !")
     setOpen(false)
     router.refresh()
   })
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" variant={workoutId ? "outline" : "default"} />}>
-        <NotebookPen className="size-4" />
-        {workoutId ? "Donner mon retour" : "Nouvelle entrée"}
+      <DialogTrigger
+        render={
+          isEdit ? (
+            <Button variant="ghost" size="icon-sm" aria-label="Modifier l'entrée" />
+          ) : (
+            <Button size="sm" variant={workoutId ? "outline" : "default"} />
+          )
+        }
+      >
+        {isEdit ? (
+          <Pencil className="size-3.5" />
+        ) : (
+          <>
+            <NotebookPen className="size-4" />
+            {workoutId ? "Donner mon retour" : "Nouvelle entrée"}
+          </>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>

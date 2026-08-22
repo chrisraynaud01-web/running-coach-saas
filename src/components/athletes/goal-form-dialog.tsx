@@ -42,7 +42,8 @@ import {
   goalStatusLabels,
   type GoalInput,
 } from "@/lib/validations/goal"
-import { createGoal, updateGoal } from "@/app/(app)/athletes/[id]/goal-actions"
+
+type ActionResult = { success: true } | { success: false; error: string }
 
 export type GoalRecord = {
   id: string
@@ -76,13 +77,15 @@ function defaultValuesFor(goal?: GoalRecord): GoalInput {
 }
 
 export function GoalFormDialog({
-  athleteId,
   goal,
   defaultPrimary,
+  createAction,
+  updateAction,
 }: {
-  athleteId: string
   goal?: GoalRecord
   defaultPrimary?: boolean
+  createAction: (input: GoalInput) => Promise<ActionResult>
+  updateAction: (goalId: string, input: GoalInput) => Promise<ActionResult>
 }) {
   const isEdit = !!goal
   const router = useRouter()
@@ -107,9 +110,7 @@ export function GoalFormDialog({
 
   const onSubmit = form.handleSubmit(async (values) => {
     setPending(true)
-    const result = isEdit
-      ? await updateGoal(goal.id, athleteId, values)
-      : await createGoal(athleteId, values)
+    const result = isEdit ? await updateAction(goal.id, values) : await createAction(values)
     setPending(false)
 
     if (!result.success) {

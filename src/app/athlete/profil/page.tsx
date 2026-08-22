@@ -4,6 +4,10 @@ import { getCurrentAthlete } from "@/lib/current-athlete"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatDate, formatPace } from "@/lib/format"
+import { MetricsFormDialog } from "@/components/athletes/metrics-form-dialog"
+import { GoalFormDialog } from "@/components/athletes/goal-form-dialog"
+import { goalStatusLabels } from "@/lib/validations/goal"
+import { addMyMetrics, createMyGoal, updateMyGoal } from "@/app/athlete/actions"
 
 export default async function AthleteProfilePage() {
   const athlete = await getCurrentAthlete()
@@ -25,15 +29,14 @@ export default async function AthleteProfilePage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Mon profil</h1>
-        <p className="text-sm text-muted-foreground">
-          Tes données sportives, telles que renseignées par ton coach.
-        </p>
+        <p className="text-sm text-muted-foreground">Tes données sportives et tes objectifs.</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-semibold">Données sportives</CardTitle>
+            <MetricsFormDialog action={addMyMetrics} />
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-y-3 text-sm">
             <Metric label="VMA" value={metrics?.vma ? `${metrics.vma} km/h` : "—"} />
@@ -48,10 +51,15 @@ export default async function AthleteProfilePage() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold">
               <Target className="size-4" /> Objectif principal
             </CardTitle>
+            {primaryGoal ? (
+              <GoalFormDialog goal={primaryGoal} createAction={createMyGoal} updateAction={updateMyGoal} />
+            ) : (
+              <GoalFormDialog defaultPrimary createAction={createMyGoal} updateAction={updateMyGoal} />
+            )}
           </CardHeader>
           <CardContent>
             {primaryGoal ? (
@@ -74,19 +82,23 @@ export default async function AthleteProfilePage() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-sm font-semibold">Historique des objectifs</CardTitle>
+          {goals.length > 0 && (
+            <GoalFormDialog createAction={createMyGoal} updateAction={updateMyGoal} />
+          )}
         </CardHeader>
         <CardContent className="space-y-2">
-          {goals.length === 0 && (
-            <p className="text-sm text-muted-foreground">Aucun historique.</p>
-          )}
+          {goals.length === 0 && <p className="text-sm text-muted-foreground">Aucun historique.</p>}
           {goals.map((g) => (
-            <div key={g.id} className="flex items-center justify-between text-sm">
+            <div key={g.id} className="flex items-center justify-between gap-2 text-sm">
               <span className="truncate">{g.title}</span>
-              <Badge variant="outline" className="shrink-0 text-xs">
-                {g.status === "ACTIVE" ? "En cours" : g.status === "ACHIEVED" ? "Atteint" : "Abandonné"}
-              </Badge>
+              <div className="flex shrink-0 items-center gap-1">
+                <Badge variant="outline" className="text-xs">
+                  {goalStatusLabels[g.status as keyof typeof goalStatusLabels] ?? g.status}
+                </Badge>
+                <GoalFormDialog goal={g} createAction={createMyGoal} updateAction={updateMyGoal} />
+              </div>
             </div>
           ))}
         </CardContent>

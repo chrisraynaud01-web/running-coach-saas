@@ -54,6 +54,7 @@ export default async function AthleteJournalPage() {
                     </span>
                   )}
                 </p>
+                <JournalEntryDialog entry={e} />
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <ScaleBadge label="RPE" value={e.rpe} />

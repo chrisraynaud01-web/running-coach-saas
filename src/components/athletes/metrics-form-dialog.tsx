@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/form"
 import { Separator } from "@/components/ui/separator"
 import { athleteMetricsSchema, type AthleteMetricsInput } from "@/lib/validations/metrics"
-import { addAthleteMetrics } from "@/app/(app)/athletes/[id]/metrics-actions"
 import { CooperCalculator } from "@/components/athletes/cooper-calculator"
 
 function emptyValues(): AthleteMetricsInput {
@@ -44,7 +43,13 @@ function emptyValues(): AthleteMetricsInput {
   }
 }
 
-export function MetricsFormDialog({ athleteId }: { athleteId: string }) {
+type ActionResult = { success: true } | { success: false; error: string }
+
+export function MetricsFormDialog({
+  action,
+}: {
+  action: (values: AthleteMetricsInput) => Promise<ActionResult>
+}) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [pending, setPending] = React.useState(false)
@@ -61,7 +66,7 @@ export function MetricsFormDialog({ athleteId }: { athleteId: string }) {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setPending(true)
-    const result = await addAthleteMetrics(athleteId, values)
+    const result = await action(values)
     setPending(false)
 
     if (!result.success) {
