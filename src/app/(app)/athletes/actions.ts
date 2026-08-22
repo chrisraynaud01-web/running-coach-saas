@@ -7,6 +7,7 @@ import { getCurrentCoach } from "@/lib/current-coach"
 import { athleteSchema, type AthleteInput } from "@/lib/validations/athlete"
 import { toOptionalFloat } from "@/lib/validations/shared"
 import { generateTempPassword } from "@/lib/generate-password"
+import { hasAnyMetric, buildAthleteMetricsData } from "@/lib/metrics-helpers"
 
 export async function createAthlete(input: AthleteInput) {
   const parsed = athleteSchema.safeParse(input)
@@ -16,6 +17,19 @@ export async function createAthlete(input: AthleteInput) {
 
   const coach = await getCurrentCoach()
   const data = parsed.data
+
+  const metricsInput = {
+    vma: data.vma,
+    maxHeartRate: data.maxHeartRate,
+    restingHeartRate: data.restingHeartRate,
+    weightKg: data.weightKg,
+    time5k: data.time5k,
+    time10k: data.time10k,
+    timeHalfMarathon: data.timeHalfMarathon,
+    timeMarathon: data.timeMarathon,
+  }
+  const withMetrics = hasAnyMetric(metricsInput)
+  const metricsData = withMetrics ? buildAthleteMetricsData(metricsInput) : null
 
   const athlete = await prisma.athlete.create({
     data: {
@@ -27,7 +41,8 @@ export async function createAthlete(input: AthleteInput) {
       birthDate: data.birthDate ? new Date(data.birthDate) : null,
       sex: data.sex,
       heightCm: toOptionalFloat(data.heightCm) ?? null,
-      weightKg: toOptionalFloat(data.weightKg) ?? null,
+      weightKg: metricsData?.weightKg ?? null,
+      metricsHistory: metricsData ? { create: metricsData } : undefined,
     },
   })
 
@@ -59,7 +74,6 @@ export async function updateAthlete(athleteId: string, input: AthleteInput) {
         birthDate: data.birthDate ? new Date(data.birthDate) : null,
         sex: data.sex,
         heightCm: toOptionalFloat(data.heightCm) ?? null,
-        weightKg: toOptionalFloat(data.weightKg) ?? null,
       },
     })
   } catch {

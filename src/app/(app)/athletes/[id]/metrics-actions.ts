@@ -4,11 +4,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { getCurrentCoach } from "@/lib/current-coach"
 import { athleteMetricsSchema, type AthleteMetricsInput } from "@/lib/validations/metrics"
-import { toOptionalFloat, toOptionalInt } from "@/lib/validations/shared"
-import { parseClockToSeconds, paceFromRaceTime } from "@/lib/time"
-
-const HALF_MARATHON_KM = 21.0975
-const MARATHON_KM = 42.195
+import { buildAthleteMetricsData } from "@/lib/metrics-helpers"
 
 export async function addAthleteMetrics(athleteId: string, input: AthleteMetricsInput) {
   const parsed = athleteMetricsSchema.safeParse(input)
@@ -24,28 +20,16 @@ export async function addAthleteMetrics(athleteId: string, input: AthleteMetrics
     return { success: false as const, error: "Athlète introuvable" }
   }
 
-  const data = parsed.data
-  const weightKg = toOptionalFloat(data.weightKg)
+  const metricsData = buildAthleteMetricsData(parsed.data)
 
   await prisma.athleteMetrics.create({
-    data: {
-      athleteId,
-      vma: toOptionalFloat(data.vma),
-      maxHeartRate: toOptionalInt(data.maxHeartRate),
-      restingHeartRate: toOptionalInt(data.restingHeartRate),
-      weightKg,
-      pace5k: paceFromRaceTime(parseClockToSeconds(data.time5k), 5),
-      pace10k: paceFromRaceTime(parseClockToSeconds(data.time10k), 10),
-      paceHalfMarathon: paceFromRaceTime(parseClockToSeconds(data.timeHalfMarathon), HALF_MARATHON_KM),
-      paceMarathon: paceFromRaceTime(parseClockToSeconds(data.timeMarathon), MARATHON_KM),
-      source: "MANUAL",
-    },
+    data: { athleteId, ...metricsData },
   })
 
-  if (weightKg) {
+  if (metricsData.weightKg) {
     await prisma.athlete.update({
       where: { id: athleteId },
-      data: { weightKg },
+      data: { weightKg: metricsData.weightKg },
     })
   }
 

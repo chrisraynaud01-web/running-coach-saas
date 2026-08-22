@@ -9,6 +9,7 @@ import { UserPlus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/select"
 import { athleteSchema, type AthleteInput } from "@/lib/validations/athlete"
 import { createAthlete, updateAthlete } from "@/app/(app)/athletes/actions"
+import { CooperCalculator } from "@/components/athletes/cooper-calculator"
 
 export type AthleteRecord = {
   id: string
@@ -57,7 +59,21 @@ function toDateInputValue(date: Date | string | null) {
 
 function defaultValuesFor(athlete?: AthleteRecord): AthleteInput {
   if (!athlete) {
-    return { firstName: "", lastName: "", email: "", phone: "", birthDate: "" }
+    return {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      birthDate: "",
+      vma: "",
+      maxHeartRate: "",
+      restingHeartRate: "",
+      weightKg: "",
+      time5k: "",
+      time10k: "",
+      timeHalfMarathon: "",
+      timeMarathon: "",
+    }
   }
   return {
     firstName: athlete.firstName,
@@ -67,7 +83,6 @@ function defaultValuesFor(athlete?: AthleteRecord): AthleteInput {
     birthDate: toDateInputValue(athlete.birthDate),
     sex: athlete.sex ?? undefined,
     heightCm: athlete.heightCm != null ? String(athlete.heightCm) : "",
-    weightKg: athlete.weightKg != null ? String(athlete.weightKg) : "",
   }
 }
 
@@ -120,13 +135,13 @@ export function AthleteFormDialog({ athlete, open: openProp, onOpenChange: onOpe
           Nouvel athlète
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Modifier l'athlète" : "Nouvel athlète"}</DialogTitle>
           <DialogDescription>
             {isEdit
               ? "Mets à jour les informations de l'athlète."
-              : "Ajoute les informations de base. Tu pourras compléter le profil ensuite."}
+              : "Renseigne son profil et, si tu les as déjà, ses données sportives — tout en une fois."}
           </DialogDescription>
         </DialogHeader>
 
@@ -204,7 +219,7 @@ export function AthleteFormDialog({ athlete, open: openProp, onOpenChange: onOpe
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="sex"
@@ -234,26 +249,144 @@ export function AthleteFormDialog({ athlete, open: openProp, onOpenChange: onOpe
                   <FormItem>
                     <FormLabel>Taille (cm)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="170" {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="weightKg"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Poids (kg)</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="60" {...field} value={field.value ?? ""} />
+                      <Input type="number" placeholder="170" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
+
+            {!isEdit && (
+              <>
+                <Separator />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Données sportives (optionnel)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Tu pourras les mettre à jour plus tard depuis la fiche de l&apos;athlète.
+                  </p>
+                </div>
+
+                <CooperCalculator onApply={(vma) => form.setValue("vma", String(vma))} />
+
+                <div className="grid grid-cols-3 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="vma"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>VMA (km/h)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.1" placeholder="17.5" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="maxHeartRate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>FC Max</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="190" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="restingHeartRate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>FC Repos</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="50" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="weightKg"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Poids (kg)</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.1" placeholder="60" className="max-w-32" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Records de course</p>
+                  <p className="text-xs text-muted-foreground">
+                    Temps réalisé (mm:ss ou h:mm:ss) — l&apos;allure est calculée automatiquement.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="time5k"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>5 km</FormLabel>
+                        <FormControl>
+                          <Input placeholder="19:30" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="time10k"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>10 km</FormLabel>
+                        <FormControl>
+                          <Input placeholder="40:30" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="timeHalfMarathon"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Semi-marathon</FormLabel>
+                        <FormControl>
+                          <Input placeholder="1:32:00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="timeMarathon"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Marathon</FormLabel>
+                        <FormControl>
+                          <Input placeholder="3:20:00" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </>
+            )}
 
             <DialogFooter>
               <Button type="submit" disabled={pending}>

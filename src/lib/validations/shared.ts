@@ -16,6 +16,12 @@ export const decimalField = z
   .or(z.literal(""))
   .refine((v) => !v || /^\d+(\.\d+)?$/.test(v), "Doit être un nombre")
 
+export const clockField = z
+  .string()
+  .optional()
+  .or(z.literal(""))
+  .refine((v) => !v || /^\d{1,2}(:\d{1,2}){1,2}$/.test(v), "Format attendu : mm:ss ou h:mm:ss")
+
 export function toOptionalInt(value?: string) {
   return value ? parseInt(value, 10) : undefined
 }
