@@ -5,13 +5,13 @@ import { WeeklyLoadChart } from "@/components/dashboard/weekly-load-chart"
 import { WorkoutTypeChart } from "@/components/dashboard/workout-type-chart"
 import { AlertPanel } from "@/components/dashboard/alert-panel"
 import { UpcomingEvents } from "@/components/dashboard/upcoming-events"
-import {
-  demoStats,
-  demoInjuryAlerts,
-  demoInactiveAthletes,
-} from "@/lib/demo-data"
+import { getCurrentCoach } from "@/lib/current-coach"
+import { getDashboardData } from "./queries"
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const coach = await getCurrentCoach()
+  const data = await getDashboardData(coach.id)
+
   return (
     <div className="space-y-6">
       <div>
@@ -22,21 +22,21 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Athlètes" value={String(demoStats.athleteCount)} icon={Users} />
+        <StatCard label="Athlètes" value={String(data.athleteCount)} icon={Users} />
         <StatCard
           label="Séances cette semaine"
-          value={String(demoStats.sessionsThisWeek)}
+          value={String(data.sessionsThisWeek)}
           icon={CalendarCheck}
         />
         <StatCard
           label="Charge hebdo. (km)"
-          value={demoStats.weeklyLoadKm.toFixed(0)}
+          value={data.weeklyLoadKm.toFixed(0)}
           icon={Gauge}
-          trendPct={demoStats.weeklyLoadTrendPct}
+          trendPct={data.weeklyLoadTrendPct}
         />
         <StatCard
           label="Taux de complétion"
-          value={`${demoStats.completionRatePct}%`}
+          value={`${data.completionRatePct}%`}
           icon={HeartPulse}
         />
       </div>
@@ -49,7 +49,7 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <WeeklyLoadChart />
+            <WeeklyLoadChart data={data.weeklyLoad} />
           </CardContent>
         </Card>
 
@@ -58,7 +58,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm font-semibold">Répartition par type</CardTitle>
           </CardHeader>
           <CardContent>
-            <WorkoutTypeChart />
+            <WorkoutTypeChart data={data.workoutTypeBreakdown} />
           </CardContent>
         </Card>
       </div>
@@ -69,7 +69,7 @@ export default function DashboardPage() {
           icon={HeartPulse}
           tone="critical"
           emptyLabel="Aucune alerte en cours."
-          items={demoInjuryAlerts.map((a) => ({
+          items={data.injuryAlerts.map((a) => ({
             primary: a.athlete,
             secondary: `${a.detail} — ${a.since}`,
           }))}
@@ -79,12 +79,12 @@ export default function DashboardPage() {
           icon={UserX}
           tone="warning"
           emptyLabel="Tous vos athlètes sont actifs."
-          items={demoInactiveAthletes.map((a) => ({
+          items={data.inactiveAthletes.map((a) => ({
             primary: a.athlete,
             secondary: `Dernière activité ${a.lastActivity}`,
           }))}
         />
-        <UpcomingEvents />
+        <UpcomingEvents events={data.upcomingEvents} />
       </div>
     </div>
   )

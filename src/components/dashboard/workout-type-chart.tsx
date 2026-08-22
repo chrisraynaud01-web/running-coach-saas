@@ -7,7 +7,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { demoWorkoutTypeBreakdown } from "@/lib/demo-data"
 
 const chartConfig = {
   value: {
@@ -16,16 +15,28 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function WorkoutTypeChart() {
+export function WorkoutTypeChart({
+  data,
+}: {
+  data: { type: string; value: number }[]
+}) {
+  if (data.length === 0) {
+    return (
+      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+        Aucune séance sur les 8 dernières semaines.
+      </div>
+    )
+  }
+
   return (
     <ChartContainer config={chartConfig} className="aspect-auto h-64 w-full">
       <BarChart
-        data={demoWorkoutTypeBreakdown}
+        data={data}
         layout="vertical"
         margin={{ left: 0, right: 16 }}
       >
         <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-        <XAxis type="number" tickLine={false} axisLine={false} />
+        <XAxis type="number" tickLine={false} axisLine={false} allowDecimals={false} />
         <YAxis
           dataKey="type"
           type="category"

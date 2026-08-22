@@ -7,7 +7,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { demoWeeklyLoad } from "@/lib/demo-data"
 
 const chartConfig = {
   volumeKm: {
@@ -16,10 +15,14 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function WeeklyLoadChart() {
+export function WeeklyLoadChart({
+  data,
+}: {
+  data: { week: string; volumeKm: number; seances: number }[]
+}) {
   return (
     <ChartContainer config={chartConfig} className="aspect-auto h-64 w-full">
-      <AreaChart data={demoWeeklyLoad} margin={{ left: 0, right: 8, top: 8 }}>
+      <AreaChart data={data} margin={{ left: 0, right: 8, top: 8 }}>
         <defs>
           <linearGradient id="fillVolume" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.25} />
