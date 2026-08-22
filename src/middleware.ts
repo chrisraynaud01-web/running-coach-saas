@@ -14,6 +14,7 @@ const COACH_PREFIXES = [
   "/analytics",
 ]
 const ATHLETE_PREFIXES = ["/athlete"]
+const PUBLIC_PREFIXES = ["/login", "/setup"]
 
 function matchesPrefix(pathname: string, prefixes: string[]) {
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"))
@@ -24,7 +25,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth
   const role = req.auth?.user?.role
 
-  const isAuthRoute = pathname.startsWith("/login")
+  const isAuthRoute = matchesPrefix(pathname, PUBLIC_PREFIXES)
   const isCoachRoute = matchesPrefix(pathname, COACH_PREFIXES)
   const isAthleteRoute = matchesPrefix(pathname, ATHLETE_PREFIXES)
 
