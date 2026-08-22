@@ -191,7 +191,7 @@ function BlockRow({
   onRemove: () => void
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>
 }) {
-  const { setValue } = useFormContext<any>()
+  const { setValue } = useFormContext()
   const distanceValue = useWatch({ control, name: `blocks.${index}.distanceMeters` })
   const repetitionsValue = useWatch({ control, name: `blocks.${index}.repetitions` })
   const setsValue = useWatch({ control, name: `blocks.${index}.sets` })

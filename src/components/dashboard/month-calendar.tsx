@@ -12,7 +12,6 @@ import {
   format,
 } from "date-fns"
 import { cn } from "@/lib/utils"
-import { formatMonthLabel } from "@/lib/format"
 import { workoutTypeColor, workoutTypeLegend } from "@/lib/workout-summary"
 import { workoutTypeValues } from "@/lib/validations/workout"
 
