@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma generate && prisma migrate deploy && next build --turbopack",
+    "build": "node -e \"console.log('[env-check] DATABASE_URL set:', !!process.env.DATABASE_URL, '| DATABASE_URL_UNPOOLED set:', !!process.env.DATABASE_URL_UNPOOLED, '| AUTH_SECRET set:', !!process.env.AUTH_SECRET)\" && prisma generate && prisma migrate deploy && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
