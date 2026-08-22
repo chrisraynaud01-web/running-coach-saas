@@ -10,6 +10,9 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Les migrations (DDL) doivent passer par la connexion directe, pas par le pooler
+    // (PgBouncer en mode transaction casse les verrous que Prisma utilise pour les migrations).
+    // L'application elle-même continue d'utiliser DATABASE_URL (poolée) via src/lib/prisma.ts.
+    url: process.env["DATABASE_URL_UNPOOLED"] || process.env["DATABASE_URL"],
   },
 });
