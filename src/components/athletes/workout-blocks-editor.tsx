@@ -320,7 +320,14 @@ function BlockRow({
                     Séries <span className="normal-case">(répéter le bloc)</span>
                   </FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="1" className="h-8 text-sm" {...field} />
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="1"
+                      className="h-8 text-sm"
+                      {...field}
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -332,7 +339,14 @@ function BlockRow({
                 <FormItem>
                   <FormLabel className="text-xs text-muted-foreground">Répétitions</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="10" className="h-8 text-sm" {...field} />
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="10"
+                      className="h-8 text-sm"
+                      {...field}
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -344,7 +358,14 @@ function BlockRow({
                 <FormItem>
                   <FormLabel className="text-xs text-muted-foreground">Distance (m)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="400" className="h-8 text-sm" {...field} />
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="400"
+                      className="h-8 text-sm"
+                      {...field}
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -386,7 +407,9 @@ function BlockRow({
                 <FormLabel className="text-xs text-muted-foreground">Allure en % VMA</FormLabel>
                 <FormControl>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder="100"
                     className="h-8 w-24 text-sm"
                     disabled={!bulk && !athleteVma}
