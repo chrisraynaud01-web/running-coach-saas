@@ -32,13 +32,23 @@ export const workoutBlockTypeValues = [
   "ECHAUFFEMENT",
   "CORPS_DE_SEANCE",
   "RETOUR_AU_CALME",
+  "REPOS",
 ] as const
 
 export const workoutBlockTypeLabels: Record<(typeof workoutBlockTypeValues)[number], string> = {
   ECHAUFFEMENT: "Échauffement",
   CORPS_DE_SEANCE: "Corps de séance",
   RETOUR_AU_CALME: "Retour au calme",
+  REPOS: "Repos",
 }
+
+// Types de séance en effort continu : le bloc n'a besoin que d'une durée et d'une allure
+// (pas de distance/séries/répétitions, qui n'ont de sens que pour du fractionné).
+export const continuousWorkoutTypes: readonly (typeof workoutTypeValues)[number][] = [
+  "ENDURANCE_FONDAMENTALE",
+  "SORTIE_LONGUE",
+  "RECUPERATION",
+]
 
 export const intensityValues = ["FAIBLE", "MODEREE", "ELEVEE", "MAXIMALE"] as const
 

@@ -35,6 +35,8 @@ import {
   workoutBlockTypeLabels,
   intensityValues,
   intensityLabels,
+  continuousWorkoutTypes,
+  workoutTypeValues,
 } from "@/lib/validations/workout"
 import {
   paceFromVmaPercent,
@@ -48,6 +50,22 @@ import {
 // non typé strictement sur WorkoutInput pour rester réutilisable entre les deux schémas.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyControl = any
+
+function emptyBlock(type: (typeof workoutBlockTypeValues)[number]) {
+  return {
+    type,
+    label: "",
+    sets: "",
+    repetitions: "",
+    distanceMeters: "",
+    durationManual: "",
+    vmaPercent: "",
+    paceManual: "",
+    recoveryDuration: "",
+    recoveryBetweenSets: "",
+    intensity: undefined,
+  }
+}
 
 export function WorkoutBlocksEditor({
   control,
@@ -64,6 +82,21 @@ export function WorkoutBlocksEditor({
   bulk?: boolean
 }) {
   const { fields, append, remove, move } = useFieldArray({ control, name: "blocks" })
+  const workoutType = useWatch({ control, name: "type" })
+  const isContinuous = continuousWorkoutTypes.includes(workoutType as (typeof workoutTypeValues)[number])
+
+  // Une séance en effort continu (endurance fondamentale, sortie longue, récupération) démarre
+  // avec un unique bloc "durée + allure" — pas de distance/séries à préciser pour ce type d'effort.
+  // Le ref évite un double ajout au montage (double-invocation des effets en dev/StrictMode).
+  const lastSeededTypeRef = React.useRef<string | undefined>(undefined)
+  React.useEffect(() => {
+    if (lastSeededTypeRef.current === workoutType) return
+    lastSeededTypeRef.current = workoutType
+    if (isContinuous && fields.length === 0) {
+      append(emptyBlock("CORPS_DE_SEANCE"))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workoutType])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -104,19 +137,7 @@ export function WorkoutBlocksEditor({
           size="sm"
           className="shrink-0"
           onClick={() =>
-            append({
-              type: fields.length === 0 ? "ECHAUFFEMENT" : "CORPS_DE_SEANCE",
-              label: "",
-              sets: "",
-              repetitions: "",
-              distanceMeters: "",
-              durationManual: "",
-              vmaPercent: "",
-              paceManual: "",
-              recoveryDuration: "",
-              recoveryBetweenSets: "",
-              intensity: undefined,
-            })
+            append(emptyBlock(fields.length === 0 ? "ECHAUFFEMENT" : "CORPS_DE_SEANCE"))
           }
         >
           <Plus className="size-3.5" />
@@ -142,6 +163,7 @@ export function WorkoutBlocksEditor({
               control={control}
               athleteVma={athleteVma}
               bulk={bulk}
+              isContinuous={isContinuous}
               onRemove={() => remove(index)}
             />
           ))}
@@ -157,6 +179,7 @@ function SortableBlockRow(props: {
   control: AnyControl
   athleteVma?: number | null
   bulk?: boolean
+  isContinuous?: boolean
   onRemove: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -181,6 +204,7 @@ function BlockRow({
   control,
   athleteVma,
   bulk,
+  isContinuous,
   onRemove,
   dragHandleProps,
 }: {
@@ -188,10 +212,16 @@ function BlockRow({
   control: AnyControl
   athleteVma?: number | null
   bulk?: boolean
+  isContinuous?: boolean
   onRemove: () => void
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>
 }) {
   const { setValue } = useFormContext()
+  const blockType = useWatch({ control, name: `blocks.${index}.type` })
+  const isRestBlock = blockType === "REPOS"
+  // Un bloc "repos" ou une séance en effort continu n'a pas de séries/répétitions/distance à
+  // préciser : uniquement une durée (et, hors repos, une allure).
+  const isSimplified = isContinuous || isRestBlock
   const distanceValue = useWatch({ control, name: `blocks.${index}.distanceMeters` })
   const repetitionsValue = useWatch({ control, name: `blocks.${index}.repetitions` })
   const setsValue = useWatch({ control, name: `blocks.${index}.sets` })
@@ -200,7 +230,7 @@ function BlockRow({
   const paceSeconds = parseClockToSeconds(pace)
   const computedDuration =
     paceSeconds && Number(distanceValue) ? durationFromPaceAndDistance(paceSeconds, Number(distanceValue)) : undefined
-  const showRecovery = Number(repetitionsValue) > 1 || Number(setsValue) > 1
+  const showRecovery = !isSimplified && (Number(repetitionsValue) > 1 || Number(setsValue) > 1)
 
   function handleVmaPercentChange(value: string) {
     setValue(`blocks.${index}.vmaPercent`, value)
@@ -278,45 +308,49 @@ function BlockRow({
         )}
       />
 
-      <div className="grid grid-cols-4 gap-2">
-        <FormField
-          control={control}
-          name={`blocks.${index}.sets`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-muted-foreground">
-                Séries <span className="normal-case">(répéter le bloc)</span>
-              </FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="1" className="h-8 text-sm" {...field} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={`blocks.${index}.repetitions`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-muted-foreground">Répétitions</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="10" className="h-8 text-sm" {...field} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={`blocks.${index}.distanceMeters`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-muted-foreground">Distance (m)</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="400" className="h-8 text-sm" {...field} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
+      <div className={isSimplified ? "grid max-w-40 grid-cols-1 gap-2" : "grid grid-cols-4 gap-2"}>
+        {!isSimplified && (
+          <>
+            <FormField
+              control={control}
+              name={`blocks.${index}.sets`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-muted-foreground">
+                    Séries <span className="normal-case">(répéter le bloc)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="1" className="h-8 text-sm" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`blocks.${index}.repetitions`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-muted-foreground">Répétitions</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="10" className="h-8 text-sm" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={control}
+              name={`blocks.${index}.distanceMeters`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-muted-foreground">Distance (m)</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="400" className="h-8 text-sm" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </>
+        )}
         {computedDuration ? (
           <FormItem>
             <FormLabel className="text-xs text-muted-foreground">Durée (auto)</FormLabel>
@@ -330,7 +364,11 @@ function BlockRow({
               <FormItem>
                 <FormLabel className="text-xs text-muted-foreground">Durée</FormLabel>
                 <FormControl>
-                  <Input placeholder="20:00" className="h-8 text-sm" {...field} />
+                  <Input
+                    placeholder="20:00"
+                    className="h-8 text-sm placeholder:italic placeholder:text-muted-foreground/60"
+                    {...field}
+                  />
                 </FormControl>
               </FormItem>
             )}
@@ -338,72 +376,74 @@ function BlockRow({
         )}
       </div>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <FormField
-          control={control}
-          name={`blocks.${index}.vmaPercent`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-muted-foreground">Allure en % VMA</FormLabel>
-              <FormControl>
-                <Input
-                  type="number"
-                  placeholder="100"
-                  className="h-8 w-24 text-sm"
-                  disabled={!bulk && !athleteVma}
-                  {...field}
-                  onChange={(e) => handleVmaPercentChange(e.target.value)}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={control}
-          name={`blocks.${index}.paceManual`}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-muted-foreground">Allure directe</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="3:55/km"
-                  className="h-8 w-24 text-sm"
-                  {...field}
-                  onChange={(e) => handlePaceChange(e.target.value)}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={control}
-          name={`blocks.${index}.intensity`}
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center gap-2 space-y-0">
-              <FormLabel className="text-xs text-muted-foreground">Intensité</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+      {!isRestBlock && (
+        <div className="flex flex-wrap items-end gap-3">
+          <FormField
+            control={control}
+            name={`blocks.${index}.vmaPercent`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-muted-foreground">Allure en % VMA</FormLabel>
                 <FormControl>
-                  <SelectTrigger className="h-8 w-36 text-xs">
-                    <SelectValue placeholder="—">
-                      {(value: string | null) =>
-                        value ? intensityLabels[value as (typeof intensityValues)[number]] : "—"
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
+                  <Input
+                    type="number"
+                    placeholder="100"
+                    className="h-8 w-24 text-sm"
+                    disabled={!bulk && !athleteVma}
+                    {...field}
+                    onChange={(e) => handleVmaPercentChange(e.target.value)}
+                  />
                 </FormControl>
-                <SelectContent>
-                  {intensityValues.map((i) => (
-                    <SelectItem key={i} value={i}>
-                      {intensityLabels[i]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormItem>
-          )}
-        />
-      </div>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={control}
+            name={`blocks.${index}.paceManual`}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-muted-foreground">Allure directe</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="3:55/km"
+                    className="h-8 w-24 text-sm"
+                    {...field}
+                    onChange={(e) => handlePaceChange(e.target.value)}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={control}
+            name={`blocks.${index}.intensity`}
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                <FormLabel className="text-xs text-muted-foreground">Intensité</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-8 w-36 text-xs">
+                      <SelectValue placeholder="—">
+                        {(value: string | null) =>
+                          value ? intensityLabels[value as (typeof intensityValues)[number]] : "—"
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {intensityValues.map((i) => (
+                      <SelectItem key={i} value={i}>
+                        {intensityLabels[i]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )}
+          />
+        </div>
+      )}
 
       {showRecovery && (
         <div className="flex flex-wrap items-end gap-3 rounded-md border border-dashed p-2">
