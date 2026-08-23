@@ -51,6 +51,22 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyControl = any
 
+const ARABIC_INDIC_DIGIT_MAP: Record<string, string> = {
+  "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4", "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
+  "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4", "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9",
+}
+
+// Certains claviers tactiles (iPad notamment, selon la région/langue du système) peuvent
+// insérer des chiffres pleine-chasse ou indo-arabes visuellement proches des chiffres latins,
+// que Number()/parseInt() ne reconnaissent pas et qui font donc échouer silencieusement le
+// calcul dérivé (%VMA -> allure) même si la case affiche "85" à l'écran.
+function normalizeDigits(raw: string): string {
+  const mapped = Array.from(raw.normalize("NFKC"))
+    .map((ch) => ARABIC_INDIC_DIGIT_MAP[ch] ?? ch)
+    .join("")
+  return mapped.replace(/[^\d]/g, "")
+}
+
 function emptyBlock(type: (typeof workoutBlockTypeValues)[number]) {
   return {
     type,
@@ -232,7 +248,8 @@ function BlockRow({
     paceSeconds && Number(distanceValue) ? durationFromPaceAndDistance(paceSeconds, Number(distanceValue)) : undefined
   const showRecovery = !isSimplified && (Number(repetitionsValue) > 1 || Number(setsValue) > 1)
 
-  function handleVmaPercentChange(value: string) {
+  function handleVmaPercentChange(rawValue: string) {
+    const value = normalizeDigits(rawValue)
     setValue(`blocks.${index}.vmaPercent`, value)
     const vmaPct = Number(value)
     if (athleteVma && vmaPct) {
@@ -324,9 +341,14 @@ function BlockRow({
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
                       placeholder="1"
                       className="h-8 text-sm"
                       {...field}
+                      onChange={(e) => field.onChange(normalizeDigits(e.target.value))}
                     />
                   </FormControl>
                 </FormItem>
@@ -343,9 +365,14 @@ function BlockRow({
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
                       placeholder="10"
                       className="h-8 text-sm"
                       {...field}
+                      onChange={(e) => field.onChange(normalizeDigits(e.target.value))}
                     />
                   </FormControl>
                 </FormItem>
@@ -362,9 +389,14 @@ function BlockRow({
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
                       placeholder="400"
                       className="h-8 text-sm"
                       {...field}
+                      onChange={(e) => field.onChange(normalizeDigits(e.target.value))}
                     />
                   </FormControl>
                 </FormItem>
