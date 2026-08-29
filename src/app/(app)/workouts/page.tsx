@@ -1,4 +1,4 @@
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns"
+import { startOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns"
 import { prisma } from "@/lib/prisma"
 import { getCurrentCoach } from "@/lib/current-coach"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,7 +14,9 @@ function dateRangeForPeriod(period: string) {
     case "month":
       return { gte: startOfMonth(now), lte: endOfMonth(now) }
     case "upcoming":
-      return { gte: now }
+      // Les séances du jour restent visibles toute la journée, quelle que soit l'heure
+      // actuelle — comparer à l'instant précis exclurait une séance du matin dès 7h passées.
+      return { gte: startOfDay(now) }
     case "all":
     default:
       return undefined
