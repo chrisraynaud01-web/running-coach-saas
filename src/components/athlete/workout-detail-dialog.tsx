@@ -12,7 +12,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { WorkoutResultDialog, type ResultBlock } from "@/components/athlete/workout-result-dialog"
-import { MarkCompleteButton } from "@/components/athlete/mark-complete-button"
 import { JournalEntryDialog } from "@/components/athlete/journal-entry-dialog"
 import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
 import { formatWorkoutSchedule, formatDistance, formatDuration } from "@/lib/format"
@@ -35,6 +34,8 @@ export type WorkoutDetailRecord = {
   plannedDurationSeconds: number | null
   coachNotes: string | null
   blocks: WorkoutDetailBlock[]
+  /** RPE déjà enregistré pour cette séance, s'il existe (issu du journal). */
+  rpe?: number | null
 }
 
 export function WorkoutDetailDialog({ workout }: { workout: WorkoutDetailRecord }) {
@@ -119,14 +120,21 @@ export function WorkoutDetailDialog({ workout }: { workout: WorkoutDetailRecord 
                 {workout.coachNotes}
               </p>
             )}
+
+            {workout.rpe != null && (
+              <p className="text-sm text-foreground/80">
+                Difficulté ressentie (RPE) : <span className="font-medium">{workout.rpe}/10</span>
+              </p>
+            )}
           </div>
 
           <DialogFooter className="flex-row flex-wrap items-center justify-end gap-2">
-            {workout.blocks.length > 0 ? (
-              <WorkoutResultDialog workoutId={workout.id} blocks={workout.blocks} isEdit={workout.status === "COMPLETED"} />
-            ) : (
-              workout.status !== "COMPLETED" && <MarkCompleteButton workoutId={workout.id} />
-            )}
+            <WorkoutResultDialog
+              workoutId={workout.id}
+              blocks={workout.blocks}
+              currentRpe={workout.rpe}
+              isEdit={workout.status === "COMPLETED"}
+            />
             <JournalEntryDialog workoutId={workout.id} workoutTitle={workout.title} />
           </DialogFooter>
         </DialogContent>

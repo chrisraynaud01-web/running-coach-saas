@@ -36,6 +36,7 @@ import {
   intensityValues,
   intensityLabels,
   continuousWorkoutTypes,
+  freeformWorkoutTypes,
   workoutTypeValues,
 } from "@/lib/validations/workout"
 import {
@@ -100,15 +101,20 @@ export function WorkoutBlocksEditor({
   const { fields, append, remove, move } = useFieldArray({ control, name: "blocks" })
   const workoutType = useWatch({ control, name: "type" })
   const isContinuous = continuousWorkoutTypes.includes(workoutType as (typeof workoutTypeValues)[number])
+  const isFreeform = freeformWorkoutTypes.includes(workoutType as (typeof workoutTypeValues)[number])
 
   // Une séance en effort continu (endurance fondamentale, sortie longue, récupération) démarre
   // avec un unique bloc "durée + allure" — pas de distance/séries à préciser pour ce type d'effort.
+  // Une séance sans structure course à pied (musculation) n'a pas de blocs du tout : on vide
+  // ceux qui existeraient déjà si le coach change le type après coup.
   // Le ref évite un double ajout au montage (double-invocation des effets en dev/StrictMode).
   const lastSeededTypeRef = React.useRef<string | undefined>(undefined)
   React.useEffect(() => {
     if (lastSeededTypeRef.current === workoutType) return
     lastSeededTypeRef.current = workoutType
-    if (isContinuous && fields.length === 0) {
+    if (isFreeform && fields.length > 0) {
+      remove()
+    } else if (isContinuous && fields.length === 0) {
       append(emptyBlock("CORPS_DE_SEANCE"))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,6 +133,8 @@ export function WorkoutBlocksEditor({
       if (oldIndex !== -1 && newIndex !== -1) move(oldIndex, newIndex)
     }
   }
+
+  if (isFreeform) return null
 
   return (
     <div className="space-y-3 rounded-lg border bg-muted/30 p-3">

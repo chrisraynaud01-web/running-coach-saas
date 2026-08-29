@@ -35,7 +35,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { bulkWorkoutSchema, workoutTypeValues, workoutTypeLabels } from "@/lib/validations/workout"
+import {
+  bulkWorkoutSchema,
+  workoutTypeValues,
+  workoutTypeLabels,
+  freeformWorkoutTypes,
+} from "@/lib/validations/workout"
 import { createWorkoutForAthletes } from "@/app/(app)/workouts/actions"
 import { TIME_OF_DAY_VALUES, timeOfDayLabels } from "@/lib/time"
 import { WorkoutBlocksEditor } from "@/components/athletes/workout-blocks-editor"
@@ -73,6 +78,8 @@ export function BulkWorkoutDialog({ athletes }: { athletes: Athlete[] }) {
     if (open) form.reset(defaultValues())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+  const watchedType = form.watch("type")
+  const isFreeform = freeformWorkoutTypes.includes(watchedType as (typeof workoutTypeValues)[number])
 
   const selectedIds = form.watch("athleteIds")
 
@@ -247,9 +254,18 @@ export function BulkWorkoutDialog({ athletes }: { athletes: Athlete[] }) {
               name="coachNotes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Consignes / notes générales</FormLabel>
+                  <FormLabel>
+                    {isFreeform ? "Contenu de la séance" : "Consignes / notes générales"}
+                  </FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Contexte, objectif de la séance..." {...field} />
+                    <Textarea
+                      placeholder={
+                        isFreeform
+                          ? "Exercices, séries, répétitions, charges..."
+                          : "Contexte, objectif de la séance..."
+                      }
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

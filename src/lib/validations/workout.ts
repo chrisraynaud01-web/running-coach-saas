@@ -50,6 +50,10 @@ export const continuousWorkoutTypes: readonly (typeof workoutTypeValues)[number]
   "RECUPERATION",
 ]
 
+// Types de séance sans structure course à pied (distance/allure/blocs) : uniquement du texte
+// libre décrivant le contenu (ex : exercices de musculation, séries, charges).
+export const freeformWorkoutTypes: readonly (typeof workoutTypeValues)[number][] = ["RENFORCEMENT"]
+
 export const intensityValues = ["FAIBLE", "MODEREE", "ELEVEE", "MAXIMALE"] as const
 
 export const intensityLabels: Record<(typeof intensityValues)[number], string> = {

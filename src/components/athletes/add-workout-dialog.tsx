@@ -38,6 +38,7 @@ import {
   workoutSchema,
   workoutTypeValues,
   workoutTypeLabels,
+  freeformWorkoutTypes,
   type WorkoutInput,
 } from "@/lib/validations/workout"
 import { createWorkout, updateWorkout } from "@/app/(app)/athletes/[id]/actions"
@@ -141,6 +142,8 @@ export function WorkoutFormDialog({
     resolver: zodResolver(workoutSchema),
     defaultValues: defaultValuesFor(athleteId, workout),
   })
+  const watchedType = form.watch("type")
+  const isFreeform = freeformWorkoutTypes.includes(watchedType as (typeof workoutTypeValues)[number])
 
   React.useEffect(() => {
     if (open) form.reset(defaultValuesFor(athleteId, workout))
@@ -275,9 +278,18 @@ export function WorkoutFormDialog({
               name="coachNotes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Consignes / notes générales</FormLabel>
+                  <FormLabel>
+                    {isFreeform ? "Contenu de la séance" : "Consignes / notes générales"}
+                  </FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Contexte, objectif de la séance..." {...field} />
+                    <Textarea
+                      placeholder={
+                        isFreeform
+                          ? "Exercices, séries, répétitions, charges..."
+                          : "Contexte, objectif de la séance..."
+                      }
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -150,18 +150,6 @@ export async function updateMyGoal(goalId: string, input: GoalInput) {
   return { success: true as const }
 }
 
-export async function markMyWorkoutCompleted(workoutId: string) {
-  const athlete = await getCurrentAthlete()
-
-  await prisma.workout.updateMany({
-    where: { id: workoutId, athleteId: athlete.id },
-    data: { status: "COMPLETED", completedAt: new Date() },
-  })
-
-  revalidatePath("/athlete")
-  return { success: true as const }
-}
-
 export async function submitWorkoutResult(input: WorkoutResultInput) {
   const parsed = workoutResultSchema.safeParse(input)
   if (!parsed.success) {
@@ -170,6 +158,7 @@ export async function submitWorkoutResult(input: WorkoutResultInput) {
 
   const athlete = await getCurrentAthlete()
   const { workoutId, blocks } = parsed.data
+  const rpe = toOptionalInt(parsed.data.rpe)
 
   const workout = await prisma.workout.findUnique({
     where: { id: workoutId, athleteId: athlete.id },
@@ -200,6 +189,22 @@ export async function submitWorkoutResult(input: WorkoutResultInput) {
       data: { status: "COMPLETED", completedAt: new Date() },
     }),
   ])
+
+  // Le RPE de la séance est stocké dans le journal (même table que les entrées de journal
+  // classiques) pour rester visible dans l'historique et alimenter les alertes du dashboard —
+  // on met à jour l'entrée existante pour cette séance si elle existe déjà, sinon on la crée.
+  if (rpe) {
+    const existingEntry = await prisma.journalEntry.findFirst({
+      where: { athleteId: athlete.id, workoutId },
+      orderBy: { createdAt: "desc" },
+    })
+    if (existingEntry) {
+      await prisma.journalEntry.update({ where: { id: existingEntry.id }, data: { rpe } })
+    } else {
+      await prisma.journalEntry.create({ data: { athleteId: athlete.id, workoutId, rpe } })
+    }
+    revalidatePath("/athlete/journal")
+  }
 
   revalidatePath("/athlete")
   return { success: true as const }

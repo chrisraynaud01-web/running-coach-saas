@@ -16,7 +16,7 @@ export default async function AthletePlanningPage() {
   const calendarGridStart = startOfWeek(startOfMonth(now), { weekStartsOn: 1 })
   const calendarGridEnd = endOfWeek(endOfMonth(now), { weekStartsOn: 1 })
 
-  const [workouts, weekWorkouts, calendarWorkouts] = await Promise.all([
+  const [workoutsRaw, weekWorkouts, calendarWorkouts] = await Promise.all([
     prisma.workout.findMany({
       where: { athleteId: athlete.id },
       orderBy: { scheduledDate: "desc" },
@@ -32,6 +32,13 @@ export default async function AthletePlanningPage() {
       select: { id: true, title: true, type: true, status: true, scheduledDate: true },
     }),
   ])
+
+  const journalRpes = await prisma.journalEntry.findMany({
+    where: { athleteId: athlete.id, workoutId: { in: workoutsRaw.map((w) => w.id) } },
+    select: { workoutId: true, rpe: true },
+  })
+  const rpeByWorkoutId = new Map(journalRpes.map((e) => [e.workoutId, e.rpe]))
+  const workouts = workoutsRaw.map((w) => ({ ...w, rpe: rpeByWorkoutId.get(w.id) ?? null }))
 
   const upcoming = workouts.filter((w) => w.status === "PLANNED")
   const past = workouts.filter((w) => w.status !== "PLANNED")
