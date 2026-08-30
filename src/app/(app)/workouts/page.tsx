@@ -31,11 +31,22 @@ export default async function WorkoutsPage({
   const { athlete: athleteId, period = "upcoming" } = await searchParams
   const coach = await getCurrentCoach()
 
-  const athletes = await prisma.athlete.findMany({
+  const athletesRaw = await prisma.athlete.findMany({
     where: { coachId: coach.id, status: { not: "ARCHIVED" } },
-    select: { id: true, firstName: true, lastName: true },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      metricsHistory: { orderBy: { recordedAt: "desc" }, take: 1, select: { vma: true } },
+    },
     orderBy: { firstName: "asc" },
   })
+  const athletes = athletesRaw.map((a) => ({
+    id: a.id,
+    firstName: a.firstName,
+    lastName: a.lastName,
+    vma: a.metricsHistory[0]?.vma ?? null,
+  }))
 
   const scheduledDate = dateRangeForPeriod(period)
 

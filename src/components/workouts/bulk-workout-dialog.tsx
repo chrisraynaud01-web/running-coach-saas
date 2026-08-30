@@ -45,7 +45,7 @@ import { createWorkoutForAthletes } from "@/app/(app)/workouts/actions"
 import { TIME_OF_DAY_VALUES, timeOfDayLabels } from "@/lib/time"
 import { WorkoutBlocksEditor } from "@/components/athletes/workout-blocks-editor"
 
-type Athlete = { id: string; firstName: string; lastName: string }
+type Athlete = { id: string; firstName: string; lastName: string; vma?: number | null }
 
 function toDateInputValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0")
@@ -82,6 +82,18 @@ export function BulkWorkoutDialog({ athletes }: { athletes: Athlete[] }) {
   const isFreeform = freeformWorkoutTypes.includes(watchedType as (typeof workoutTypeValues)[number])
 
   const selectedIds = form.watch("athleteIds")
+
+  // Aperçu de l'allure basé sur le premier athlète sélectionné — l'allure réelle de chaque
+  // athlète est de toute façon recalculée individuellement à l'enregistrement.
+  const previewAthlete = selectedIds.length > 0 ? athletes.find((a) => a.id === selectedIds[0]) : undefined
+  const athleteVmaNote =
+    selectedIds.length === 0
+      ? "Sélectionne au moins un athlète pour voir un aperçu de l'allure."
+      : !previewAthlete?.vma
+        ? "Renseigne la VMA de cet athlète (fiche athlète) pour voir un aperçu de l'allure."
+        : selectedIds.length > 1
+          ? `Aperçu basé sur la VMA de ${previewAthlete.firstName} (${previewAthlete.vma} km/h) — recalculée pour chaque athlète sélectionné à l'enregistrement.`
+          : undefined
 
   const onSubmit = form.handleSubmit(async (values) => {
     setPending(true)
@@ -246,7 +258,8 @@ export function BulkWorkoutDialog({ athletes }: { athletes: Athlete[] }) {
             <WorkoutBlocksEditor
               control={form.control}
               bulk
-              athleteVmaNote="L'allure en % VMA sera calculée séparément pour chaque athlète sélectionné, à partir de sa propre VMA."
+              athleteVma={previewAthlete?.vma}
+              athleteVmaNote={athleteVmaNote}
             />
 
             <FormField
