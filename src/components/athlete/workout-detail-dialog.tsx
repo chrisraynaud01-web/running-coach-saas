@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { WorkoutResultDialog, type ResultBlock } from "@/components/athlete/workout-result-dialog"
 import { JournalEntryDialog } from "@/components/athlete/journal-entry-dialog"
+import { WorkoutPhotos } from "@/components/athlete/workout-photos"
 import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
 import { formatWorkoutSchedule, formatDistance, formatDuration } from "@/lib/format"
 import { secondsToClock } from "@/lib/time"
@@ -36,6 +37,7 @@ export type WorkoutDetailRecord = {
   blocks: WorkoutDetailBlock[]
   /** RPE déjà enregistré pour cette séance, s'il existe (issu du journal). */
   rpe?: number | null
+  photoUrls: string[]
 }
 
 export function WorkoutDetailDialog({ workout }: { workout: WorkoutDetailRecord }) {
@@ -126,6 +128,8 @@ export function WorkoutDetailDialog({ workout }: { workout: WorkoutDetailRecord 
                 Difficulté ressentie (RPE) : <span className="font-medium">{workout.rpe}/10</span>
               </p>
             )}
+
+            <WorkoutPhotos workoutId={workout.id} photoUrls={workout.photoUrls} />
           </div>
 
           <DialogFooter className="flex-row flex-wrap items-center justify-end gap-2">

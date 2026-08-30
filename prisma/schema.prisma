@@ -321,6 +321,7 @@ model Workout {
 
   coachNotes   String? @db.Text
   athleteNotes String? @db.Text
+  photoUrls    String[] @default([])
 
   // Regroupe les séances créées via "dupliquer" / "répéter"
   seriesId String?

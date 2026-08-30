@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { put, del } from "@vercel/blob"
 import { prisma } from "@/lib/prisma"
 import { getCurrentAthlete } from "@/lib/current-athlete"
 import { journalEntrySchema, type JournalEntryInput } from "@/lib/validations/journal"
@@ -204,6 +205,77 @@ export async function submitWorkoutResult(input: WorkoutResultInput) {
       await prisma.journalEntry.create({ data: { athleteId: athlete.id, workoutId, rpe } })
     }
     revalidatePath("/athlete/journal")
+  }
+
+  revalidatePath("/athlete")
+  return { success: true as const }
+}
+
+const MAX_PHOTOS_PER_WORKOUT = 6
+const MAX_PHOTO_SIZE_BYTES = 8 * 1024 * 1024
+
+export async function addWorkoutPhoto(workoutId: string, formData: FormData) {
+  const athlete = await getCurrentAthlete()
+
+  const file = formData.get("photo")
+  if (!(file instanceof File) || file.size === 0) {
+    return { success: false as const, error: "Aucune photo reçue" }
+  }
+  if (!file.type.startsWith("image/")) {
+    return { success: false as const, error: "Le fichier doit être une image" }
+  }
+  if (file.size > MAX_PHOTO_SIZE_BYTES) {
+    return { success: false as const, error: "Photo trop lourde (8 Mo max)" }
+  }
+
+  const workout = await prisma.workout.findUnique({
+    where: { id: workoutId, athleteId: athlete.id },
+    select: { photoUrls: true },
+  })
+  if (!workout) {
+    return { success: false as const, error: "Séance introuvable" }
+  }
+  if (workout.photoUrls.length >= MAX_PHOTOS_PER_WORKOUT) {
+    return { success: false as const, error: `Maximum ${MAX_PHOTOS_PER_WORKOUT} photos par séance` }
+  }
+
+  let blob
+  try {
+    blob = await put(`workouts/${workoutId}/${file.name}`, file, { access: "public" })
+  } catch (err) {
+    console.error("addWorkoutPhoto: blob upload failed", err)
+    return { success: false as const, error: "Envoi de la photo impossible pour le moment" }
+  }
+
+  await prisma.workout.update({
+    where: { id: workoutId },
+    data: { photoUrls: { push: blob.url } },
+  })
+
+  revalidatePath("/athlete")
+  return { success: true as const, url: blob.url }
+}
+
+export async function removeWorkoutPhoto(workoutId: string, url: string) {
+  const athlete = await getCurrentAthlete()
+
+  const workout = await prisma.workout.findUnique({
+    where: { id: workoutId, athleteId: athlete.id },
+    select: { photoUrls: true },
+  })
+  if (!workout) {
+    return { success: false as const, error: "Séance introuvable" }
+  }
+
+  await prisma.workout.update({
+    where: { id: workoutId },
+    data: { photoUrls: workout.photoUrls.filter((u) => u !== url) },
+  })
+
+  try {
+    await del(url)
+  } catch {
+    // Suppression du fichier non bloquante : l'important est qu'il ne soit plus lié à la séance.
   }
 
   revalidatePath("/athlete")
