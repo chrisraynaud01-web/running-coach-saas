@@ -5,15 +5,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatDate, formatPace } from "@/lib/format"
 import { MetricsFormDialog } from "@/components/athletes/metrics-form-dialog"
+import { MetricsHistoryCard } from "@/components/athletes/metrics-history-card"
 import { GoalFormDialog } from "@/components/athletes/goal-form-dialog"
+import { DeleteGoalButton } from "@/components/athletes/delete-goal-button"
 import { goalStatusLabels } from "@/lib/validations/goal"
-import { addMyMetrics, createMyGoal, updateMyGoal } from "@/app/athlete/actions"
+import {
+  addMyMetrics,
+  updateMyMetrics,
+  deleteMyMetrics,
+  createMyGoal,
+  updateMyGoal,
+  deleteMyGoal,
+} from "@/app/athlete/actions"
 
 export default async function AthleteProfilePage() {
   const athlete = await getCurrentAthlete()
 
-  const [metrics, goals] = await Promise.all([
-    prisma.athleteMetrics.findFirst({
+  const [metricsHistory, goals] = await Promise.all([
+    prisma.athleteMetrics.findMany({
       where: { athleteId: athlete.id },
       orderBy: { recordedAt: "desc" },
     }),
@@ -22,6 +31,7 @@ export default async function AthleteProfilePage() {
       orderBy: { createdAt: "desc" },
     }),
   ])
+  const metrics = metricsHistory[0]
 
   const primaryGoal = goals.find((g) => g.isPrimary) ?? goals[0]
 
@@ -98,11 +108,18 @@ export default async function AthleteProfilePage() {
                   {goalStatusLabels[g.status as keyof typeof goalStatusLabels] ?? g.status}
                 </Badge>
                 <GoalFormDialog goal={g} createAction={createMyGoal} updateAction={updateMyGoal} />
+                <DeleteGoalButton goalId={g.id} deleteAction={deleteMyGoal} />
               </div>
             </div>
           ))}
         </CardContent>
       </Card>
+
+      <MetricsHistoryCard
+        history={metricsHistory}
+        updateAction={updateMyMetrics}
+        deleteAction={deleteMyMetrics}
+      />
     </div>
   )
 }

@@ -10,14 +10,16 @@ import { AthleteStatusBadge } from "@/components/athletes/athlete-status-badge"
 import { WorkoutFormDialog } from "@/components/athletes/add-workout-dialog"
 import { AthleteActionsMenu } from "@/components/athletes/athlete-actions-menu"
 import { MetricsFormDialog } from "@/components/athletes/metrics-form-dialog"
+import { MetricsHistoryCard } from "@/components/athletes/metrics-history-card"
 import { AthleteAccessCard } from "@/components/athletes/athlete-access-card"
 import { WorkoutListItem } from "@/components/athletes/workout-list-item"
 import { GoalFormDialog } from "@/components/athletes/goal-form-dialog"
 import { AthleteEvolutionCard } from "@/components/athletes/athlete-evolution-card"
 import { goalStatusLabels } from "@/lib/validations/goal"
 import { calculateAge, formatDate, formatPace, formatMemberSince } from "@/lib/format"
-import { addAthleteMetrics } from "@/app/(app)/athletes/[id]/metrics-actions"
-import { createGoal, updateGoal } from "@/app/(app)/athletes/[id]/goal-actions"
+import { addAthleteMetrics, updateAthleteMetrics, deleteAthleteMetrics } from "@/app/(app)/athletes/[id]/metrics-actions"
+import { createGoal, updateGoal, deleteGoal } from "@/app/(app)/athletes/[id]/goal-actions"
+import { DeleteGoalButton } from "@/components/athletes/delete-goal-button"
 
 export default async function AthleteDetailPage({
   params,
@@ -181,6 +183,7 @@ export default async function AthleteDetailPage({
                     createAction={createGoal.bind(null, athlete.id)}
                     updateAction={updateGoal.bind(null, athlete.id)}
                   />
+                  <DeleteGoalButton goalId={g.id} deleteAction={deleteGoal.bind(null, athlete.id)} />
                 </div>
               </div>
             ))}
@@ -195,6 +198,12 @@ export default async function AthleteDetailPage({
       </div>
 
       <AthleteEvolutionCard history={athlete.metricsHistory} />
+
+      <MetricsHistoryCard
+        history={athlete.metricsHistory}
+        updateAction={updateAthleteMetrics.bind(null, athlete.id)}
+        deleteAction={deleteAthleteMetrics.bind(null, athlete.id)}
+      />
 
       <Card>
         <CardHeader>

@@ -17,7 +17,7 @@ import { WorkoutPhotos } from "@/components/athlete/workout-photos"
 import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
 import { formatWorkoutSchedule, formatDistance, formatDuration } from "@/lib/format"
 import { secondsToClock } from "@/lib/time"
-import { formatBlockSummary, totalReps } from "@/lib/workout-summary"
+import { formatBlockSummary, totalReps, workoutTypeColor } from "@/lib/workout-summary"
 
 export type WorkoutDetailBlock = ResultBlock & {
   durationSeconds: number | null
@@ -42,6 +42,7 @@ export type WorkoutDetailRecord = {
 
 export function WorkoutDetailDialog({ workout }: { workout: WorkoutDetailRecord }) {
   const [open, setOpen] = React.useState(false)
+  const typeColor = workoutTypeColor[workout.type as keyof typeof workoutTypeColor] ?? "var(--muted-foreground)"
 
   return (
     <>
@@ -53,7 +54,11 @@ export function WorkoutDetailDialog({ workout }: { workout: WorkoutDetailRecord 
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-medium">{workout.title}</p>
-            <Badge variant="secondary" className="shrink-0 text-xs">
+            <Badge
+              variant="outline"
+              className="shrink-0 border-transparent text-xs"
+              style={{ backgroundColor: `color-mix(in srgb, ${typeColor} 15%, transparent)`, color: typeColor }}
+            >
               {workoutTypeLabels[workout.type as keyof typeof workoutTypeLabels] ?? workout.type}
             </Badge>
             {workout.status === "COMPLETED" && (

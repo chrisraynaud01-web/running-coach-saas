@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { Pencil } from "lucide-react"
+import { Pencil, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,52 +29,94 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { athleteMetricsSchema, type AthleteMetricsInput } from "@/lib/validations/metrics"
 import { CooperCalculator } from "@/components/athletes/cooper-calculator"
+import { secondsToClock } from "@/lib/time"
 
-function emptyValues(): AthleteMetricsInput {
+const HALF_MARATHON_KM = 21.0975
+const MARATHON_KM = 42.195
+
+export type AthleteMetricsRecord = {
+  id: string
+  vma: number | null
+  maxHeartRate: number | null
+  restingHeartRate: number | null
+  weightKg: number | null
+  pace5k: number | null
+  pace10k: number | null
+  paceHalfMarathon: number | null
+  paceMarathon: number | null
+}
+
+function timeFromPace(pace: number | null, distanceKm: number): string {
+  return pace ? secondsToClock(Math.round(pace * distanceKm)) : ""
+}
+
+function defaultValuesFor(metrics?: AthleteMetricsRecord): AthleteMetricsInput {
+  if (!metrics) {
+    return {
+      vma: "",
+      maxHeartRate: "",
+      restingHeartRate: "",
+      weightKg: "",
+      time5k: "",
+      time10k: "",
+      timeHalfMarathon: "",
+      timeMarathon: "",
+    }
+  }
   return {
-    vma: "",
-    maxHeartRate: "",
-    restingHeartRate: "",
-    weightKg: "",
-    time5k: "",
-    time10k: "",
-    timeHalfMarathon: "",
-    timeMarathon: "",
+    vma: metrics.vma != null ? String(metrics.vma) : "",
+    maxHeartRate: metrics.maxHeartRate != null ? String(metrics.maxHeartRate) : "",
+    restingHeartRate: metrics.restingHeartRate != null ? String(metrics.restingHeartRate) : "",
+    weightKg: metrics.weightKg != null ? String(metrics.weightKg) : "",
+    time5k: timeFromPace(metrics.pace5k, 5),
+    time10k: timeFromPace(metrics.pace10k, 10),
+    timeHalfMarathon: timeFromPace(metrics.paceHalfMarathon, HALF_MARATHON_KM),
+    timeMarathon: timeFromPace(metrics.paceMarathon, MARATHON_KM),
   }
 }
 
 type ActionResult = { success: true } | { success: false; error: string }
 
 export function MetricsFormDialog({
+  metrics,
   action,
+  updateAction,
 }: {
-  action: (values: AthleteMetricsInput) => Promise<ActionResult>
+  /** Présent en mode édition d'un relevé existant. */
+  metrics?: AthleteMetricsRecord
+  /** Création d'un nouveau relevé. */
+  action?: (values: AthleteMetricsInput) => Promise<ActionResult>
+  /** Modification d'un relevé existant (fourni avec `metrics`). */
+  updateAction?: (metricsId: string, values: AthleteMetricsInput) => Promise<ActionResult>
 }) {
+  const isEdit = !!metrics
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [pending, setPending] = React.useState(false)
 
   const form = useForm({
     resolver: zodResolver(athleteMetricsSchema),
-    defaultValues: emptyValues(),
+    defaultValues: defaultValuesFor(metrics),
   })
 
   React.useEffect(() => {
-    if (open) form.reset(emptyValues())
+    if (open) form.reset(defaultValuesFor(metrics))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const onSubmit = form.handleSubmit(async (values) => {
     setPending(true)
-    const result = await action(values)
+    const result =
+      isEdit && metrics && updateAction ? await updateAction(metrics.id, values) : action ? await action(values) : undefined
     setPending(false)
 
+    if (!result) return
     if (!result.success) {
       toast.error(result.error)
       return
     }
 
-    toast.success("Données sportives mises à jour.")
+    toast.success(isEdit ? "Relevé mis à jour." : "Données sportives mises à jour.")
     setOpen(false)
     router.refresh()
   })
@@ -82,15 +124,23 @@ export function MetricsFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        render={<Button variant="ghost" size="icon-sm" aria-label="Modifier les données sportives" />}
+        render={
+          isEdit ? (
+            <Button variant="ghost" size="icon-sm" aria-label="Modifier ce relevé" />
+          ) : (
+            <Button variant="ghost" size="icon-sm" aria-label="Ajouter un relevé" />
+          )
+        }
       >
-        <Pencil className="size-3.5" />
+        {isEdit ? <Pencil className="size-3.5" /> : <Plus className="size-3.5" />}
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Données sportives</DialogTitle>
+          <DialogTitle>{isEdit ? "Modifier ce relevé" : "Données sportives"}</DialogTitle>
           <DialogDescription>
-            Chaque enregistrement garde un historique pour suivre la progression de l&apos;athlète.
+            {isEdit
+              ? "Corrige les valeurs de ce relevé daté."
+              : "Chaque enregistrement garde un historique pour suivre la progression de l'athlète."}
           </DialogDescription>
         </DialogHeader>
 
@@ -220,7 +270,7 @@ export function MetricsFormDialog({
 
             <DialogFooter>
               <Button type="submit" disabled={pending}>
-                {pending ? "Enregistrement..." : "Enregistrer"}
+                {pending ? "Enregistrement..." : isEdit ? "Enregistrer" : "Ajouter"}
               </Button>
             </DialogFooter>
           </form>

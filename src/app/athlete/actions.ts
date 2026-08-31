@@ -66,6 +66,20 @@ export async function updateJournalEntry(entryId: string, input: JournalEntryInp
   return { success: true as const }
 }
 
+// Le poids affiché sur le profil suit toujours le relevé le plus récent — à resynchroniser
+// après toute création/modification/suppression, pas seulement après un ajout.
+async function syncMyWeightFromLatestMetrics(athleteId: string) {
+  const latest = await prisma.athleteMetrics.findFirst({
+    where: { athleteId },
+    orderBy: { recordedAt: "desc" },
+    select: { weightKg: true },
+  })
+  await prisma.athlete.update({
+    where: { id: athleteId },
+    data: { weightKg: latest?.weightKg ?? null },
+  })
+}
+
 export async function addMyMetrics(input: AthleteMetricsInput) {
   const parsed = athleteMetricsSchema.safeParse(input)
   if (!parsed.success) {
@@ -78,13 +92,36 @@ export async function addMyMetrics(input: AthleteMetricsInput) {
   await prisma.athleteMetrics.create({
     data: { athleteId: athlete.id, ...metricsData },
   })
+  await syncMyWeightFromLatestMetrics(athlete.id)
 
-  if (metricsData.weightKg) {
-    await prisma.athlete.update({
-      where: { id: athlete.id },
-      data: { weightKg: metricsData.weightKg },
-    })
+  revalidatePath("/athlete/profil")
+  return { success: true as const }
+}
+
+export async function updateMyMetrics(metricsId: string, input: AthleteMetricsInput) {
+  const parsed = athleteMetricsSchema.safeParse(input)
+  if (!parsed.success) {
+    return { success: false as const, error: parsed.error.issues[0]?.message ?? "Données invalides" }
   }
+
+  const athlete = await getCurrentAthlete()
+  const metricsData = buildAthleteMetricsData(parsed.data)
+
+  await prisma.athleteMetrics.updateMany({
+    where: { id: metricsId, athleteId: athlete.id },
+    data: metricsData,
+  })
+  await syncMyWeightFromLatestMetrics(athlete.id)
+
+  revalidatePath("/athlete/profil")
+  return { success: true as const }
+}
+
+export async function deleteMyMetrics(metricsId: string) {
+  const athlete = await getCurrentAthlete()
+
+  await prisma.athleteMetrics.deleteMany({ where: { id: metricsId, athleteId: athlete.id } })
+  await syncMyWeightFromLatestMetrics(athlete.id)
 
   revalidatePath("/athlete/profil")
   return { success: true as const }
@@ -146,6 +183,15 @@ export async function updateMyGoal(goalId: string, input: GoalInput) {
       status: data.status,
     },
   })
+
+  revalidatePath("/athlete/profil")
+  return { success: true as const }
+}
+
+export async function deleteMyGoal(goalId: string) {
+  const athlete = await getCurrentAthlete()
+
+  await prisma.goal.deleteMany({ where: { id: goalId, athleteId: athlete.id } })
 
   revalidatePath("/athlete/profil")
   return { success: true as const }

@@ -1,18 +1,19 @@
 import { secondsToClock } from "@/lib/time"
 import { workoutTypeValues, workoutTypeLabels } from "@/lib/validations/workout"
 
-// Regroupement par famille d'entraînement — 10 types pour ~7 teintes catégorielles
-// distinctes (les familles proches, ex. fractionné court/long, partagent une teinte).
+// Regroupement par famille d'entraînement — 10 types pour ~7 teintes, dans l'ordre
+// d'intensité croissante (bleu calme -> or -> orange -> rouge pour la VMA, l'effort le plus
+// dur) ; renforcement et compétition suivent un axe différent (nature de l'effort / événement).
 export const workoutTypeColor: Record<(typeof workoutTypeValues)[number], string> = {
+  RECUPERATION: "var(--chart-1)",
   ENDURANCE_FONDAMENTALE: "var(--chart-1)",
   SORTIE_LONGUE: "var(--chart-1)",
-  RECUPERATION: "var(--chart-1)",
   SEUIL: "var(--chart-4)",
-  VMA: "var(--chart-2)",
-  FRACTIONNE_COURT: "var(--chart-5)",
-  FRACTIONNE_LONG: "var(--chart-5)",
+  FRACTIONNE_COURT: "var(--chart-2)",
+  FRACTIONNE_LONG: "var(--chart-2)",
+  VMA: "var(--color-critical)",
+  COMPETITION: "var(--chart-5)",
   RENFORCEMENT: "var(--chart-3)",
-  COMPETITION: "var(--color-critical)",
   AUTRE: "var(--muted-foreground)",
 }
 

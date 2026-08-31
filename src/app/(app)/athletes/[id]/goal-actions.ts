@@ -82,3 +82,16 @@ export async function updateGoal(athleteId: string, goalId: string, input: GoalI
   revalidatePath(`/athletes/${athleteId}`)
   return { success: true as const }
 }
+
+export async function deleteGoal(athleteId: string, goalId: string) {
+  try {
+    await assertAthleteOwnership(athleteId)
+  } catch {
+    return { success: false as const, error: "Athlète introuvable" }
+  }
+
+  await prisma.goal.deleteMany({ where: { id: goalId, athleteId } })
+
+  revalidatePath(`/athletes/${athleteId}`)
+  return { success: true as const }
+}

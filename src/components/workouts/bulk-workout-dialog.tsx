@@ -44,6 +44,7 @@ import {
 import { createWorkoutForAthletes } from "@/app/(app)/workouts/actions"
 import { TIME_OF_DAY_VALUES, timeOfDayLabels } from "@/lib/time"
 import { WorkoutBlocksEditor } from "@/components/athletes/workout-blocks-editor"
+import { workoutTypeColor } from "@/lib/workout-summary"
 
 type Athlete = { id: string; firstName: string; lastName: string; vma?: number | null }
 
@@ -195,7 +196,17 @@ export function BulkWorkoutDialog({ athletes }: { athletes: Athlete[] }) {
                         <SelectTrigger className="w-full">
                           <SelectValue>
                             {(value: string | null) =>
-                              value ? workoutTypeLabels[value as (typeof workoutTypeValues)[number]] : ""
+                              value ? (
+                                <span className="flex items-center gap-1.5">
+                                  <span
+                                    className="size-2 shrink-0 rounded-full"
+                                    style={{ backgroundColor: workoutTypeColor[value as (typeof workoutTypeValues)[number]] }}
+                                  />
+                                  {workoutTypeLabels[value as (typeof workoutTypeValues)[number]]}
+                                </span>
+                              ) : (
+                                ""
+                              )
                             }
                           </SelectValue>
                         </SelectTrigger>
@@ -203,7 +214,13 @@ export function BulkWorkoutDialog({ athletes }: { athletes: Athlete[] }) {
                       <SelectContent>
                         {workoutTypeValues.map((t) => (
                           <SelectItem key={t} value={t}>
-                            {workoutTypeLabels[t]}
+                            <span className="flex items-center gap-1.5">
+                              <span
+                                className="size-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: workoutTypeColor[t] }}
+                              />
+                              {workoutTypeLabels[t]}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>

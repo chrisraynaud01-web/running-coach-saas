@@ -4,7 +4,7 @@ import { WorkoutRowActions } from "@/components/athletes/workout-row-actions"
 import { workoutTypeLabels, workoutBlockTypeLabels } from "@/lib/validations/workout"
 import { formatWorkoutSchedule, formatDistance, formatDuration } from "@/lib/format"
 import { secondsToClock } from "@/lib/time"
-import { formatBlockSummary, totalReps } from "@/lib/workout-summary"
+import { formatBlockSummary, totalReps, workoutTypeColor } from "@/lib/workout-summary"
 
 export type WorkoutListItemData = {
   id: string
@@ -52,12 +52,18 @@ export function WorkoutListItem({
   athleteVma?: number | null
   athleteName?: string
 }) {
+  const typeColor = workoutTypeColor[workout.type as keyof typeof workoutTypeColor] ?? "var(--muted-foreground)"
+
   return (
     <div className="flex items-start justify-between gap-3 border-b py-2.5 last:border-0">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-medium">{workout.title}</p>
-          <Badge variant="secondary" className="shrink-0 text-xs">
+          <Badge
+            variant="outline"
+            className="shrink-0 border-transparent text-xs"
+            style={{ backgroundColor: `color-mix(in srgb, ${typeColor} 15%, transparent)`, color: typeColor }}
+          >
             {workoutTypeLabels[workout.type as keyof typeof workoutTypeLabels] ?? workout.type}
           </Badge>
           {workout.status === "COMPLETED" && (
