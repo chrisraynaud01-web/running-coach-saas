@@ -68,7 +68,7 @@ export function buildBlocksCreateData(blocks: WorkoutBlockInput[], athleteVma?: 
         paceTargetSecPerKm: null,
         recoveryDurationSeconds: null,
         recoveryBetweenSetsSeconds: parseClockToSeconds(b.recoveryBetweenSets) ?? null,
-        intensity: b.intensity,
+        targetRpe: toOptionalInt(b.targetRpe) ?? null,
         legs: { create: legs.map((leg, legIndex) => buildLegCreateData(leg, legIndex, athleteVma)) },
       }
     }
@@ -93,7 +93,7 @@ export function buildBlocksCreateData(blocks: WorkoutBlockInput[], athleteVma?: 
       paceTargetSecPerKm,
       recoveryDurationSeconds: parseClockToSeconds(b.recoveryDuration) ?? null,
       recoveryBetweenSetsSeconds: parseClockToSeconds(b.recoveryBetweenSets) ?? null,
-      intensity: b.intensity,
+      targetRpe: toOptionalInt(b.targetRpe) ?? null,
     }
   })
 }

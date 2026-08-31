@@ -373,7 +373,7 @@ model WorkoutBlock {
   durationSeconds Int?
   vmaPercent  Int? // allure exprimée en % de la VMA de l'athlète au moment de la création
   paceTargetSecPerKm Int? // allure cible calculée (secondes/km), dérivée de vmaPercent ou saisie directement
-  intensity   Intensity?
+  targetRpe   Int? // difficulté visée par le coach pour ce bloc (RPE 1-10)
 
   recoveryDurationSeconds    Int? // récupération entre répétitions au sein d'une série (ex : "r:1'15")
   recoveryBetweenSetsSeconds Int? // récupération entre séries (ex : "R:3'")

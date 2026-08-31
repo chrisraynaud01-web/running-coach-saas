@@ -64,7 +64,7 @@ export type WorkoutRecord = {
     paceTargetSecPerKm: number | null
     recoveryDurationSeconds: number | null
     recoveryBetweenSetsSeconds: number | null
-    intensity: string | null
+    targetRpe: number | null
     legs: {
       distanceMeters: number | null
       durationSeconds: number | null
@@ -116,7 +116,7 @@ function defaultValuesFor(athleteId: string, workout?: WorkoutRecord): WorkoutIn
       paceManual: b.paceTargetSecPerKm ? secondsToClock(b.paceTargetSecPerKm) : "",
       recoveryDuration: b.recoveryDurationSeconds ? secondsToClock(b.recoveryDurationSeconds) : "",
       recoveryBetweenSets: b.recoveryBetweenSetsSeconds ? secondsToClock(b.recoveryBetweenSetsSeconds) : "",
-      intensity: (b.intensity ?? undefined) as WorkoutInput["blocks"][number]["intensity"],
+      targetRpe: b.targetRpe != null ? String(b.targetRpe) : "",
       legs: b.legs.map((leg) => ({
         distanceMeters: leg.distanceMeters != null ? String(leg.distanceMeters) : "",
         durationManual: !leg.paceTargetSecPerKm && leg.durationSeconds ? secondsToClock(leg.durationSeconds) : "",

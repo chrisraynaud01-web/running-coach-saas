@@ -27,7 +27,7 @@ export type WorkoutListItemData = {
     recoveryBetweenSetsSeconds: number | null
     vmaPercent: number | null
     paceTargetSecPerKm: number | null
-    intensity: string | null
+    targetRpe: number | null
     actualDurationSeconds: number | null
     actualRepSecondsList: number[]
     actualNotes: string | null

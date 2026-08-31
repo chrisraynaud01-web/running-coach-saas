@@ -33,8 +33,6 @@ import {
 import {
   workoutBlockTypeValues,
   workoutBlockTypeLabels,
-  intensityValues,
-  intensityLabels,
   continuousWorkoutTypes,
   freeformWorkoutTypes,
   workoutTypeValues,
@@ -80,7 +78,7 @@ function emptyBlock(type: (typeof workoutBlockTypeValues)[number]) {
     paceManual: "",
     recoveryDuration: "",
     recoveryBetweenSets: "",
-    intensity: undefined,
+    targetRpe: "",
     legs: [],
   }
 }
@@ -603,28 +601,30 @@ function BlockRow({
 
           <FormField
             control={control}
-            name={`blocks.${index}.intensity`}
+            name={`blocks.${index}.targetRpe`}
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center gap-2 space-y-0">
-                <FormLabel className="text-xs text-muted-foreground">Intensité</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="h-8 w-36 text-xs">
-                      <SelectValue placeholder="—">
-                        {(value: string | null) =>
-                          value ? intensityLabels[value as (typeof intensityValues)[number]] : "—"
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {intensityValues.map((i) => (
-                      <SelectItem key={i} value={i}>
-                        {intensityLabels[i]}
-                      </SelectItem>
+              <FormItem>
+                <FormLabel className="text-xs text-muted-foreground">
+                  RPE visé {field.value ? `— ${field.value}/10` : ""}
+                </FormLabel>
+                <FormControl>
+                  <div className="flex flex-wrap gap-1">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => field.onChange(String(n) === field.value ? "" : String(n))}
+                        className={`flex size-6 items-center justify-center rounded border text-[11px] transition-colors ${
+                          String(n) === field.value
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-input bg-transparent hover:bg-muted"
+                        }`}
+                      >
+                        {n}
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </FormControl>
               </FormItem>
             )}
           />

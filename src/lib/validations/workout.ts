@@ -54,14 +54,11 @@ export const continuousWorkoutTypes: readonly (typeof workoutTypeValues)[number]
 // libre décrivant le contenu (ex : exercices de musculation, séries, charges).
 export const freeformWorkoutTypes: readonly (typeof workoutTypeValues)[number][] = ["RENFORCEMENT"]
 
-export const intensityValues = ["FAIBLE", "MODEREE", "ELEVEE", "MAXIMALE"] as const
-
-export const intensityLabels: Record<(typeof intensityValues)[number], string> = {
-  FAIBLE: "Faible",
-  MODEREE: "Modérée",
-  ELEVEE: "Élevée",
-  MAXIMALE: "Maximale",
-}
+// Difficulté visée par le coach pour un bloc, sur l'échelle RPE (1 = très facile, 10 = maximal).
+const targetRpeField = integerField.refine(
+  (v) => !v || (Number(v) >= 1 && Number(v) <= 10),
+  "RPE entre 1 et 10"
+)
 
 // Une "portion" au sein d'un bloc à portions enchaînées (ex : le "200m à allure A" dans
 // "200m@A -> 300m@B -> 200m@A"). Chaque portion a sa propre distance et sa propre allure.
@@ -88,7 +85,7 @@ export const workoutBlockSchema = z.object({
   paceManual: clockField,
   recoveryDuration: clockField,
   recoveryBetweenSets: clockField,
-  intensity: z.enum(intensityValues).optional(),
+  targetRpe: targetRpeField,
   // Présent uniquement pour un bloc "portions enchaînées" (ex : 4 tours de 200m@A/300m@B/200m@A)
   // — quand non vide, distanceMeters/vmaPercent/paceManual/durationManual du bloc sont ignorés.
   legs: z.array(workoutBlockLegSchema).max(10).optional(),
