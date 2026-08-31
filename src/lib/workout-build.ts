@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma"
 import { toOptionalInt } from "@/lib/validations/shared"
-import { paceFromVmaPercent, durationFromPaceAndDistance, parseClockToSeconds } from "@/lib/time"
+import {
+  paceFromVmaPercent,
+  durationFromPaceAndDistance,
+  distanceFromPaceAndDuration,
+  parseClockToSeconds,
+} from "@/lib/time"
 import type { WorkoutBlockInput, WorkoutBlockLegInput } from "@/lib/validations/workout"
 
 export async function getAthleteVma(athleteId: string) {
@@ -24,10 +29,20 @@ function computePaceAndDuration(
   const vmaPercent = toOptionalInt(vmaPercentRaw) ?? null
   const paceFromVma = vmaPercent ? paceFromVmaPercent(athleteVma, vmaPercent) : undefined
   const paceTargetSecPerKm = paceFromVma ?? parseClockToSeconds(paceManual) ?? null
-  const distanceMeters = toOptionalInt(distanceMetersRaw) ?? null
+  let distanceMeters = toOptionalInt(distanceMetersRaw) ?? null
+  const manualDurationSeconds = parseClockToSeconds(durationManual) ?? null
+
   const autoDurationSeconds =
     paceTargetSecPerKm && distanceMeters ? durationFromPaceAndDistance(paceTargetSecPerKm, distanceMeters) : null
-  const durationSeconds = autoDurationSeconds ?? parseClockToSeconds(durationManual) ?? null
+  const durationSeconds = autoDurationSeconds ?? manualDurationSeconds
+
+  // Pas de distance saisie mais une allure et une durée manuelle connues (ex : échauffement
+  // "20 min à 6:15/km") — on en déduit la distance réellement parcourue, sinon elle est
+  // silencieusement ignorée du total de la séance.
+  if (!distanceMeters && paceTargetSecPerKm && manualDurationSeconds) {
+    distanceMeters = distanceFromPaceAndDuration(paceTargetSecPerKm, manualDurationSeconds) ?? null
+  }
+
   return { vmaPercent, paceTargetSecPerKm, distanceMeters, durationSeconds }
 }
 

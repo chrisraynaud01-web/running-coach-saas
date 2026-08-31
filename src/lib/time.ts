@@ -55,6 +55,13 @@ export function durationFromPaceAndDistance(paceSecPerKm?: number, distanceMeter
   return Math.round((paceSecPerKm * distanceMeters) / 1000)
 }
 
+// Inverse : distance (m) parcourue en une durée donnée (secondes) à une allure donnée
+// (secondes/km) — ex : un échauffement saisi en "20 min à 6:15/km" plutôt qu'en distance.
+export function distanceFromPaceAndDuration(paceSecPerKm?: number, durationSeconds?: number): number | undefined {
+  if (!paceSecPerKm || !durationSeconds) return undefined
+  return Math.round((durationSeconds / paceSecPerKm) * 1000)
+}
+
 // Pourcentage de VMA à partir d'une allure (secondes/km) et de la VMA (km/h) — inverse de paceFromVmaPercent.
 export function vmaPercentFromPace(vma?: number, paceSecPerKm?: number): number | undefined {
   if (!vma || !paceSecPerKm) return undefined
