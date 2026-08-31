@@ -27,6 +27,10 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String?
+  // Copie chiffrée (réversible) du mot de passe temporaire généré pour un accès athlète, pour
+  // que le coach puisse le retrouver sans devoir le réinitialiser à chaque fois. N'existe que
+  // pour les comptes créés/réinitialisés via le flux "Accès athlète" — jamais pour un coach.
+  passwordEncrypted String?
   role          UserRole  @default(ATHLETE)
 
   createdAt DateTime @updatedAt @default(now())

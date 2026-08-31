@@ -7,6 +7,7 @@ import { getCurrentCoach } from "@/lib/current-coach"
 import { athleteSchema, type AthleteInput } from "@/lib/validations/athlete"
 import { toOptionalFloat } from "@/lib/validations/shared"
 import { generateTempPassword } from "@/lib/generate-password"
+import { encryptSecret, decryptSecret } from "@/lib/credentials-crypto"
 import { hasAnyMetric, buildAthleteMetricsData } from "@/lib/metrics-helpers"
 
 export async function createAthlete(input: AthleteInput) {
@@ -130,6 +131,7 @@ export async function createAthleteAccess(athleteId: string) {
       name: `${athlete.firstName} ${athlete.lastName}`,
       role: "ATHLETE",
       passwordHash,
+      passwordEncrypted: encryptSecret(tempPassword),
     },
   })
 
@@ -157,10 +159,30 @@ export async function resetAthleteAccessPassword(athleteId: string) {
 
   await prisma.user.update({
     where: { id: athlete.userId },
-    data: { passwordHash },
+    data: { passwordHash, passwordEncrypted: encryptSecret(tempPassword) },
   })
 
   return { success: true as const, email: athlete.email, password: tempPassword }
+}
+
+export async function getAthleteAccessPassword(athleteId: string) {
+  const coach = await getCurrentCoach()
+
+  const athlete = await prisma.athlete.findUnique({
+    where: { id: athleteId, coachId: coach.id },
+    select: { email: true, user: { select: { passwordEncrypted: true } } },
+  })
+  if (!athlete?.user) {
+    return { success: false as const, error: "Cet athlète n'a pas encore d'accès." }
+  }
+  if (!athlete.user.passwordEncrypted) {
+    return {
+      success: false as const,
+      error: "Mot de passe non récupérable pour cet accès (créé avant cette fonctionnalité) — réinitialise-le pour en voir un nouveau.",
+    }
+  }
+
+  return { success: true as const, email: athlete.email, password: decryptSecret(athlete.user.passwordEncrypted) }
 }
 
 export async function archiveAthlete(athleteId: string) {

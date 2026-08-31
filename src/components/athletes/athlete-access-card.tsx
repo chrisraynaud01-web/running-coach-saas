@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { KeyRound, Copy, CheckCircle2 } from "lucide-react"
+import { KeyRound, Copy, CheckCircle2, Eye } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { createAthleteAccess, resetAthleteAccessPassword } from "@/app/(app)/athletes/actions"
+import {
+  createAthleteAccess,
+  resetAthleteAccessPassword,
+  getAthleteAccessPassword,
+} from "@/app/(app)/athletes/actions"
 
 export function AthleteAccessCard({
   athleteId,
@@ -60,6 +64,19 @@ export function AthleteAccessCard({
     router.refresh()
   }
 
+  async function handleView() {
+    setPending(true)
+    const result = await getAthleteAccessPassword(athleteId)
+    setPending(false)
+
+    if (!result.success) {
+      toast.error(result.error)
+      return
+    }
+
+    setCredentials({ email: result.email, password: result.password })
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center gap-2 space-y-0">
@@ -78,9 +95,15 @@ export function AthleteAccessCard({
                 Connexion avec : <span className="font-mono">{accessEmail}</span>
               </p>
             )}
-            <Button size="sm" variant="outline" disabled={pending} onClick={handleReset}>
-              {pending ? "..." : "Réinitialiser le mot de passe"}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" disabled={pending} onClick={handleView}>
+                <Eye className="size-3.5" />
+                Voir le mot de passe
+              </Button>
+              <Button size="sm" variant="outline" disabled={pending} onClick={handleReset}>
+                {pending ? "..." : "Réinitialiser le mot de passe"}
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -99,7 +122,8 @@ export function AthleteAccessCard({
           <DialogHeader>
             <DialogTitle>Identifiants</DialogTitle>
             <DialogDescription>
-              Communique ces identifiants à ton athlète. Ils ne seront plus affichés ensuite.
+              Communique ces identifiants à ton athlète. Tu pourras les revoir à tout moment via
+              « Voir le mot de passe ».
             </DialogDescription>
           </DialogHeader>
           {credentials && (
