@@ -2,10 +2,6 @@ import {
   LayoutDashboard,
   Users,
   CalendarDays,
-  Dumbbell,
-  MessageSquare,
-  FileText,
-  BarChart3,
   User,
   NotebookPen,
   type LucideIcon,
@@ -22,10 +18,6 @@ export const coachNavItems: NavItem[] = [
   { title: "Athlètes", href: "/athletes", icon: Users },
   { title: "Séances", href: "/workouts", icon: NotebookPen },
   { title: "Calendrier", href: "/calendar", icon: CalendarDays },
-  { title: "Bibliothèque", href: "/exercises", icon: Dumbbell },
-  { title: "Messagerie", href: "/messages", icon: MessageSquare },
-  { title: "Documents", href: "/documents", icon: FileText },
-  { title: "Analyse", href: "/analytics", icon: BarChart3 },
 ]
 
 export const athleteNavItems: NavItem[] = [

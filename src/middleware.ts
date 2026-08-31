@@ -4,16 +4,7 @@ import { authConfig } from "@/auth.config"
 
 const { auth } = NextAuth(authConfig)
 
-const COACH_PREFIXES = [
-  "/dashboard",
-  "/athletes",
-  "/workouts",
-  "/calendar",
-  "/exercises",
-  "/messages",
-  "/documents",
-  "/analytics",
-]
+const COACH_PREFIXES = ["/dashboard", "/athletes", "/workouts", "/calendar"]
 const ATHLETE_PREFIXES = ["/athlete"]
 const PUBLIC_PREFIXES = ["/login", "/setup"]
 

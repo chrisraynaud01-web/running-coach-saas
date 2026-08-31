@@ -266,6 +266,22 @@ function BlockRow({
   const computedDuration =
     paceSeconds && Number(distanceValue) ? durationFromPaceAndDistance(paceSeconds, Number(distanceValue)) : undefined
 
+  // Dans le formulaire multi-athlètes, la VMA d'aperçu change quand le coach coche un autre
+  // athlète — il faut alors recalculer l'allure directe à partir du %VMA déjà saisi (pas
+  // seulement quand ce champ change lui-même).
+  const vmaPercentValue = useWatch({ control, name: `blocks.${index}.vmaPercent` })
+  const prevAthleteVmaRef = React.useRef(athleteVma)
+  React.useEffect(() => {
+    if (prevAthleteVmaRef.current === athleteVma) return
+    prevAthleteVmaRef.current = athleteVma
+    const vmaPct = Number(vmaPercentValue)
+    if (athleteVma && vmaPct) {
+      const derivedPace = paceFromVmaPercent(athleteVma, vmaPct)
+      if (derivedPace) setValue(`blocks.${index}.paceManual`, secondsToClock(derivedPace))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [athleteVma])
+
   // Portions enchaînées (ex : 200m@A -> 300m@B -> 200m@A répété plusieurs "tours") : chaque
   // portion a sa propre distance/allure, "sets" devient le nombre de tours.
   const { fields: legFields, append: appendLeg, remove: removeLeg } = useFieldArray({
@@ -679,6 +695,21 @@ function LegRow({
 }) {
   const { setValue } = useFormContext()
   const base = `blocks.${blockIndex}.legs.${legIndex}`
+
+  // Même correctif que pour un bloc simple : recalculer l'allure quand la VMA d'aperçu change
+  // (changement d'athlète sélectionné dans le formulaire multi-athlètes).
+  const vmaPercentValue = useWatch({ control, name: `${base}.vmaPercent` })
+  const prevAthleteVmaRef = React.useRef(athleteVma)
+  React.useEffect(() => {
+    if (prevAthleteVmaRef.current === athleteVma) return
+    prevAthleteVmaRef.current = athleteVma
+    const vmaPct = Number(vmaPercentValue)
+    if (athleteVma && vmaPct) {
+      const derivedPace = paceFromVmaPercent(athleteVma, vmaPct)
+      if (derivedPace) setValue(`${base}.paceManual`, secondsToClock(derivedPace))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [athleteVma])
 
   function handleVmaPercentChange(rawValue: string) {
     const value = normalizeDigits(rawValue)
