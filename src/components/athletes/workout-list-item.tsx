@@ -31,6 +31,13 @@ export type WorkoutListItemData = {
     actualDurationSeconds: number | null
     actualRepSecondsList: number[]
     actualNotes: string | null
+    legs: {
+      distanceMeters: number | null
+      durationSeconds: number | null
+      vmaPercent: number | null
+      paceTargetSecPerKm: number | null
+      recoveryAfterSeconds: number | null
+    }[]
   }[]
 }
 

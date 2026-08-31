@@ -383,11 +383,36 @@ model WorkoutBlock {
 
   // Retour de l'athlète après réalisation de la séance
   actualDurationSeconds Int?
-  actualRepSecondsList  Int[] @default([]) // temps réalisé par répétition (aligné sur sets x repetitions)
+  actualRepSecondsList  Int[] @default([]) // temps réalisé par répétition (aligné sur sets x repetitions,
+                                            // ou sets x portions quand le bloc a des portions enchaînées)
   actualNotes           String? @db.Text
+
+  // Portions enchaînées au sein d'un même tour (ex : 200m à une allure, 300m à une autre, 200m à
+  // la première...) — quand présentes, distanceMeters/vmaPercent/paceTargetSecPerKm/durationSeconds
+  // du bloc ne sont pas utilisés : chaque portion a sa propre distance et allure. "sets" devient
+  // alors le nombre de tours, "recoveryBetweenSetsSeconds" la récup entre deux tours complets.
+  legs WorkoutBlockLeg[]
 
   @@index([workoutId])
   @@map("workout_blocks")
+}
+
+model WorkoutBlockLeg {
+  id      String       @id @default(cuid())
+  blockId String
+  block   WorkoutBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  order   Int
+
+  distanceMeters  Int?
+  durationSeconds Int?
+  vmaPercent      Int?
+  paceTargetSecPerKm Int?
+  // Récupération après cette portion, avant la suivante dans le même tour (absente sur la
+  // dernière portion : la transition entre deux tours passe par recoveryBetweenSetsSeconds).
+  recoveryAfterSeconds Int?
+
+  @@index([blockId])
+  @@map("workout_block_legs")
 }
 
 // =========================================================================

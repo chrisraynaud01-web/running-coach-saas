@@ -40,6 +40,22 @@ export type ResultBlock = {
   actualDurationSeconds?: number | null
   actualRepSecondsList?: number[]
   actualNotes?: string | null
+  legs?: {
+    distanceMeters: number | null
+    vmaPercent: number | null
+    paceTargetSecPerKm: number | null
+    recoveryAfterSeconds: number | null
+  }[]
+}
+
+// Pour un bloc à portions enchaînées, chaque case du grille de saisie correspond à un
+// (tour, portion) précis plutôt qu'à une répétition uniforme — ex : "T1 · 200m".
+function repLabel(block: ResultBlock, repIndex: number): string {
+  const legsCount = block.legs?.length ?? 0
+  if (legsCount === 0) return `Rep ${repIndex + 1}`
+  const tour = Math.floor(repIndex / legsCount) + 1
+  const leg = block.legs![repIndex % legsCount]
+  return `T${tour} · ${leg.distanceMeters ?? "?"}m`
 }
 
 export function WorkoutResultDialog({
@@ -167,7 +183,7 @@ export function WorkoutResultDialog({
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel className="text-xs text-muted-foreground">
-                                Rep {repIndex + 1}
+                                {repLabel(block, repIndex)}
                               </FormLabel>
                               <FormControl>
                                 <Input placeholder="mm:ss" className="h-8 text-sm" {...field} />

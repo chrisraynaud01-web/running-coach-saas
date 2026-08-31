@@ -81,6 +81,17 @@ function emptyBlock(type: (typeof workoutBlockTypeValues)[number]) {
     recoveryDuration: "",
     recoveryBetweenSets: "",
     intensity: undefined,
+    legs: [],
+  }
+}
+
+function emptyLeg() {
+  return {
+    distanceMeters: "",
+    durationManual: "",
+    vmaPercent: "",
+    paceManual: "",
+    recoveryAfter: "",
   }
 }
 
@@ -254,7 +265,18 @@ function BlockRow({
   const paceSeconds = parseClockToSeconds(pace)
   const computedDuration =
     paceSeconds && Number(distanceValue) ? durationFromPaceAndDistance(paceSeconds, Number(distanceValue)) : undefined
-  const showRecovery = !isSimplified && (Number(repetitionsValue) > 1 || Number(setsValue) > 1)
+
+  // Portions enchaînées (ex : 200m@A -> 300m@B -> 200m@A répété plusieurs "tours") : chaque
+  // portion a sa propre distance/allure, "sets" devient le nombre de tours.
+  const { fields: legFields, append: appendLeg, remove: removeLeg } = useFieldArray({
+    control,
+    name: `blocks.${index}.legs`,
+  })
+  const hasLegs = legFields.length > 0
+
+  const showRepRecovery = !isSimplified && !hasLegs && Number(repetitionsValue) > 1
+  const showSetsRecovery = !isSimplified && Number(setsValue) > 1
+  const showRecovery = showRepRecovery || showSetsRecovery
 
   function handleVmaPercentChange(rawValue: string) {
     const value = normalizeDigits(rawValue)
@@ -333,8 +355,25 @@ function BlockRow({
         )}
       />
 
-      <div className={isSimplified ? "grid max-w-40 grid-cols-1 gap-2" : "grid grid-cols-4 gap-2"}>
-        {!isSimplified && (
+      {!isSimplified && !hasLegs && (
+        <button
+          type="button"
+          onClick={() => {
+            appendLeg(emptyLeg())
+            appendLeg(emptyLeg())
+          }}
+          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          + Enchaîner plusieurs portions dans un même tour (ex : 200m → 300m → 200m)
+        </button>
+      )}
+
+      <div
+        className={
+          isSimplified || hasLegs ? "grid max-w-40 grid-cols-1 gap-2" : "grid grid-cols-4 gap-2"
+        }
+      >
+        {!isSimplified && !hasLegs && (
           <>
             <FormField
               control={control}
@@ -412,32 +451,100 @@ function BlockRow({
             />
           </>
         )}
-        {computedDuration ? (
-          <FormItem>
-            <FormLabel className="text-xs text-muted-foreground">Durée (auto)</FormLabel>
-            <p className="flex h-8 items-center text-sm font-medium">{secondsToClock(computedDuration)}</p>
-          </FormItem>
-        ) : (
+        {hasLegs && (
           <FormField
             control={control}
-            name={`blocks.${index}.durationManual`}
+            name={`blocks.${index}.sets`}
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs text-muted-foreground">Durée</FormLabel>
+                <FormLabel className="text-xs text-muted-foreground">
+                  Tours <span className="normal-case">(répéter la séquence)</span>
+                </FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="20:00"
-                    className="h-8 text-sm placeholder:italic placeholder:text-muted-foreground/60"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    placeholder="4"
+                    className="h-8 text-sm"
                     {...field}
+                    onChange={(e) => field.onChange(normalizeDigits(e.target.value))}
                   />
                 </FormControl>
               </FormItem>
             )}
           />
         )}
+        {!hasLegs &&
+          (computedDuration ? (
+            <FormItem>
+              <FormLabel className="text-xs text-muted-foreground">Durée (auto)</FormLabel>
+              <p className="flex h-8 items-center text-sm font-medium">{secondsToClock(computedDuration)}</p>
+            </FormItem>
+          ) : (
+            <FormField
+              control={control}
+              name={`blocks.${index}.durationManual`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-muted-foreground">Durée</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="20:00"
+                      className="h-8 text-sm placeholder:italic placeholder:text-muted-foreground/60"
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          ))}
       </div>
 
-      {!isRestBlock && (
+      {hasLegs && (
+        <div className="space-y-1.5 rounded-md border border-dashed p-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium text-muted-foreground">
+              Portions enchaînées, dans l&apos;ordre
+            </p>
+            <button
+              type="button"
+              onClick={() => removeLeg()}
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              Revenir à un bloc simple
+            </button>
+          </div>
+          {legFields.map((legField, legIndex) => (
+            <LegRow
+              key={legField.id}
+              control={control}
+              blockIndex={index}
+              legIndex={legIndex}
+              athleteVma={athleteVma}
+              bulk={bulk}
+              isLast={legIndex === legFields.length - 1}
+              onRemove={() => removeLeg(legIndex)}
+            />
+          ))}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => appendLeg(emptyLeg())}
+          >
+            <Plus className="size-3.5" />
+            Ajouter une portion
+          </Button>
+        </div>
+      )}
+
+      {!isRestBlock && !hasLegs && (
         <div className="flex flex-wrap items-end gap-3">
           <FormField
             control={control}
@@ -510,39 +617,176 @@ function BlockRow({
 
       {showRecovery && (
         <div className="flex flex-wrap items-end gap-3 rounded-md border border-dashed p-2">
-          <FormField
-            control={control}
-            name={`blocks.${index}.recoveryDuration`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs text-muted-foreground">
-                  Récup entre répétitions (r:)
-                </FormLabel>
-                <FormControl>
-                  <Input placeholder="1:15" className="h-8 w-20 text-sm" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={control}
-            name={`blocks.${index}.recoveryBetweenSets`}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs text-muted-foreground">
-                  Récup entre séries (R:)
-                </FormLabel>
-                <FormControl>
-                  <Input placeholder="3:00" className="h-8 w-20 text-sm" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          {showRepRecovery && (
+            <FormField
+              control={control}
+              name={`blocks.${index}.recoveryDuration`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-muted-foreground">
+                    Récup entre répétitions (r:)
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="1:15" className="h-8 w-20 text-sm" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          )}
+          {showSetsRecovery && (
+            <FormField
+              control={control}
+              name={`blocks.${index}.recoveryBetweenSets`}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-muted-foreground">
+                    {hasLegs ? "Récup entre tours (R:)" : "Récup entre séries (R:)"}
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="3:00" className="h-8 w-20 text-sm" {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          )}
           <p className="pb-2 text-xs text-muted-foreground">
-            Ex : 2 x (4 x 600m, récup 1&apos;15) avec 3&apos; entre les séries
+            {hasLegs
+              ? "Ex : 4 tours de (200m → 300m → 200m) avec 2' entre les tours"
+              : "Ex : 2 x (4 x 600m, récup 1'15) avec 3' entre les séries"}
           </p>
         </div>
       )}
+    </div>
+  )
+}
+
+function LegRow({
+  control,
+  blockIndex,
+  legIndex,
+  athleteVma,
+  bulk,
+  isLast,
+  onRemove,
+}: {
+  control: AnyControl
+  blockIndex: number
+  legIndex: number
+  athleteVma?: number | null
+  bulk?: boolean
+  isLast: boolean
+  onRemove: () => void
+}) {
+  const { setValue } = useFormContext()
+  const base = `blocks.${blockIndex}.legs.${legIndex}`
+
+  function handleVmaPercentChange(rawValue: string) {
+    const value = normalizeDigits(rawValue)
+    setValue(`${base}.vmaPercent`, value)
+    const vmaPct = Number(value)
+    if (athleteVma && vmaPct) {
+      const derivedPace = paceFromVmaPercent(athleteVma, vmaPct)
+      if (derivedPace) setValue(`${base}.paceManual`, secondsToClock(derivedPace))
+    }
+  }
+
+  function handlePaceChange(value: string) {
+    setValue(`${base}.paceManual`, value)
+    const paceSec = parseClockToSeconds(value)
+    if (athleteVma && paceSec) {
+      const derivedPercent = vmaPercentFromPace(athleteVma, paceSec)
+      if (derivedPercent) setValue(`${base}.vmaPercent`, String(derivedPercent))
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-end gap-2 rounded border bg-background p-2">
+      <span className="pb-1.5 text-xs text-muted-foreground">{legIndex + 1}.</span>
+      <FormField
+        control={control}
+        name={`${base}.distanceMeters`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-[10px] text-muted-foreground">Distance (m)</FormLabel>
+            <FormControl>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                placeholder="200"
+                className="h-7 w-20 text-xs"
+                {...field}
+                onChange={(e) => field.onChange(normalizeDigits(e.target.value))}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={control}
+        name={`${base}.vmaPercent`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-[10px] text-muted-foreground">% VMA</FormLabel>
+            <FormControl>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="100"
+                className="h-7 w-16 text-xs"
+                disabled={!bulk && !athleteVma}
+                {...field}
+                onChange={(e) => handleVmaPercentChange(e.target.value)}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={control}
+        name={`${base}.paceManual`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-[10px] text-muted-foreground">Allure</FormLabel>
+            <FormControl>
+              <Input
+                placeholder="3:55/km"
+                className="h-7 w-20 text-xs"
+                {...field}
+                onChange={(e) => handlePaceChange(e.target.value)}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+      {!isLast && (
+        <FormField
+          control={control}
+          name={`${base}.recoveryAfter`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-[10px] text-muted-foreground">Récup après</FormLabel>
+              <FormControl>
+                <Input placeholder="0:20" className="h-7 w-16 text-xs" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      )}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="size-6 shrink-0 text-muted-foreground"
+        onClick={onRemove}
+      >
+        <X className="size-3.5" />
+      </Button>
     </div>
   )
 }

@@ -63,6 +63,20 @@ export const intensityLabels: Record<(typeof intensityValues)[number], string> =
   MAXIMALE: "Maximale",
 }
 
+// Une "portion" au sein d'un bloc à portions enchaînées (ex : le "200m à allure A" dans
+// "200m@A -> 300m@B -> 200m@A"). Chaque portion a sa propre distance et sa propre allure.
+export const workoutBlockLegSchema = z.object({
+  distanceMeters: integerField,
+  durationManual: clockField,
+  vmaPercent: integerField,
+  paceManual: clockField,
+  // Récupération après cette portion, avant la suivante du même tour (pas de sens sur la
+  // dernière portion : la transition entre deux tours passe par recoveryBetweenSets du bloc).
+  recoveryAfter: clockField,
+})
+
+export type WorkoutBlockLegInput = z.infer<typeof workoutBlockLegSchema>
+
 export const workoutBlockSchema = z.object({
   type: z.enum(workoutBlockTypeValues),
   label: z.string().max(200).optional().or(z.literal("")),
@@ -75,6 +89,9 @@ export const workoutBlockSchema = z.object({
   recoveryDuration: clockField,
   recoveryBetweenSets: clockField,
   intensity: z.enum(intensityValues).optional(),
+  // Présent uniquement pour un bloc "portions enchaînées" (ex : 4 tours de 200m@A/300m@B/200m@A)
+  // — quand non vide, distanceMeters/vmaPercent/paceManual/durationManual du bloc sont ignorés.
+  legs: z.array(workoutBlockLegSchema).max(10).optional(),
 })
 
 export type WorkoutBlockInput = z.infer<typeof workoutBlockSchema>

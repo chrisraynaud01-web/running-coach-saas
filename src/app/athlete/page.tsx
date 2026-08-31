@@ -21,7 +21,9 @@ export default async function AthletePlanningPage() {
       where: { athleteId: athlete.id },
       orderBy: { scheduledDate: "desc" },
       take: 20,
-      include: { blocks: { orderBy: { order: "asc" } } },
+      include: {
+        blocks: { orderBy: { order: "asc" }, include: { legs: { orderBy: { order: "asc" } } } },
+      },
     }),
     prisma.workout.findMany({
       where: { athleteId: athlete.id, scheduledDate: { gte: weekStart, lte: weekEnd } },

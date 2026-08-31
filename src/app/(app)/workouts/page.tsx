@@ -58,7 +58,7 @@ export default async function WorkoutsPage({
     orderBy: { scheduledDate: period === "upcoming" ? "asc" : "desc" },
     take: 100,
     include: {
-      blocks: { orderBy: { order: "asc" } },
+      blocks: { orderBy: { order: "asc" }, include: { legs: { orderBy: { order: "asc" } } } },
       athlete: {
         select: {
           id: true,

@@ -35,7 +35,9 @@ export default async function AthleteDetailPage({
       workouts: {
         orderBy: { scheduledDate: "desc" },
         take: 20,
-        include: { blocks: { orderBy: { order: "asc" } } },
+        include: {
+          blocks: { orderBy: { order: "asc" }, include: { legs: { orderBy: { order: "asc" } } } },
+        },
       },
     },
   })
